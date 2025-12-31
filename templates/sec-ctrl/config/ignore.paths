@@ -1,0 +1,10 @@
+sec-ctrl/
+tools/sec-audit-agent/
+.git/
+node_modules/
+dist/
+build/
+target/
+vendor/
+.venv/
+__pycache__/

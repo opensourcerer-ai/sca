@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Minimal v1 CLI wrapper.
+# For now, we route to the shell runner that invokes Claude Code.
+
+CMD="${1:-}"
+shift || true
+
+case "$CMD" in
+  audit)
+    "$(dirname "$0")/sec-audit.sh" "$@"
+    ;;
+  scope)
+    "$(dirname "$0")/repo-scope.sh" "$@"
+    ;;
+  *)
+    echo "Usage: sca <audit|scope> [flags]"
+    exit 1
+    ;;
+esac
