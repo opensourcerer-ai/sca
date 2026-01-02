@@ -75,6 +75,16 @@ Each finding MUST include at least one of the following:
 | SCA-878 | Insecure WebSocket configuration | Medium | Network Security | Active |
 | SCA-879 | Insecure gRPC configuration | Medium | Network Security | Active |
 | SCA-880 | Verbose network error messages | Low | Network Security | Active |
+| SCA-301 | Broken Object Level Authorization (IDOR) | Critical | API Security | Active |
+| SCA-302 | Broken Authentication | Critical | API Security | Active |
+| SCA-303 | Broken Object Property Level Authorization | Critical | API Security | Active |
+| SCA-304 | Unrestricted Resource Consumption | High | API Security | Active |
+| SCA-305 | Broken Function Level Authorization | High | API Security | Active |
+| SCA-306 | Unrestricted Access to Sensitive Business Flows | Medium | API Security | Active |
+| SCA-307 | Server Side Request Forgery (API-specific) | High | API Security | Active |
+| SCA-308 | Security Misconfiguration | Critical | API Security | Active |
+| SCA-309 | Improper Inventory Management | Medium | API Security | Active |
+| SCA-310 | Unsafe Consumption of APIs | Medium | API Security | Active |
 
 ### Reserved Blocks
 

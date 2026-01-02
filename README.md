@@ -115,21 +115,70 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for details.
 
 ## What SCA Audits
 
-### Language-Specific Checks
-- **C/C++**: Buffer overflows, stack overflows, use-after-free, double-free, format strings, race conditions, uninitialized variables
-- **Go**: Error handling, SQL injection, path traversal
-- **Java**: Deserialization, XXE, SQL injection
-- **JavaScript/TypeScript**: XSS, prototype pollution, eval usage
-- **Python**: SQL injection, pickle usage, subprocess injection
-- **Rust**: Unsafe blocks, FFI boundaries
+### Language-Specific Security (150+ Invariants)
+- **C/C++**: Buffer overflows, stack overflows, use-after-free, double-free, format strings, race conditions, uninitialized variables, memory leaks, integer overflows
+- **Go**: Error handling, memory leaks (goroutines, timers, HTTP bodies), data races, GC pressure, SQL injection, path traversal
+- **Java**: Deserialization, XXE, SQL injection, GC leaks (listeners, ThreadLocal, classloaders), threading issues
+- **JavaScript/TypeScript**: XSS, prototype pollution, eval usage, timing attacks
+- **Python**: SQL injection, pickle deserialization, subprocess injection, GIL issues, circular references
+- **Rust**: Unsafe blocks, FFI boundaries, memory safety
 
-### Cross-Cutting Concerns
-- Authentication & authorization design
-- Secrets in code (API keys, tokens, credentials)
-- Cryptography misuse (weak algorithms, ECB mode, non-PQC, key exposure)
-- Input validation and sanitization
-- Dependency risk (lockfiles, CVEs via optional scanners)
-- LLM/Agent security (prompt injection, tool boundaries, data leakage)
+### Authentication & Authorization (SCA-301 to SCA-310, 870-880)
+- **Authentication**: Hard-coded credentials, weak passwords, insecure storage, missing MFA, session management
+- **Access Control**: Missing authorization checks, IDOR, privilege escalation, path traversal, CORS misconfigurations
+- **API Security** (OWASP API Security Top 10 2023):
+  - Broken object/function level authorization
+  - Broken authentication, mass assignment
+  - Unrestricted resource consumption, rate limiting
+  - Security misconfiguration, API versioning
+  - SSRF in webhooks and third-party integrations
+
+### Network Security (SCA-870 to SCA-880)
+- **Protocol Security**: HTTP vs HTTPS, TLS certificate validation, weak TLS (1.0/1.1), cipher suites
+- **Server Configuration**: Insecure bindings (0.0.0.0), missing timeouts, hardcoded IPs
+- **WebSocket/gRPC**: Missing TLS, authentication, DNS rebinding
+- **SSRF Protection**: URL validation, IP range blocking, metadata service protection
+
+### Cryptography (SCA-100 to SCA-199)
+- **Weak Algorithms**: DES, 3DES, RC4, MD5, SHA-1, RSA <2048
+- **Key Management**: Hard-coded keys, key exposure, missing rotation, TPM usage
+- **Modes & Padding**: ECB mode, insecure random, timing attacks
+- **Post-Quantum**: PQC migration readiness (ML-KEM, ML-DSA)
+- **Format-Preserving Encryption**: FF1/FF3 vulnerabilities
+
+### Data Protection & Privacy (SCA-200 to SCA-299)
+- **Logging**: Secrets in logs, PII exposure, sanitization
+- **Database**: Unencrypted connections, plaintext sensitive data
+- **Privacy Compliance**: GDPR (consent, minimization, retention, DSARs), CCPA, HIPAA
+- **PII Handling**: Collection, storage, cross-border transfers
+
+### Container & Kubernetes Security (SCA-851 to SCA-861)
+- **Container Hardening**: Root users, privileged mode, capabilities, host mounts
+- **Secrets Management**: Secrets in images, environment variables
+- **Network Policies**: Missing policies, overly permissive rules
+- **RBAC**: Cluster-admin bindings, wildcard permissions
+- **Resource Limits**: CPU/memory limits, Pod Security Standards
+
+### TPM & Attestation (SCA-801 to SCA-807)
+- **Hardware Security**: TPM 2.0 usage, Secure Boot, remote attestation
+- **Confidential Computing**: SGX, SEV, TDX attestation
+- **Platform Integrity**: PCR usage, attestation key provisioning
+
+### Supply Chain Security (SCA-900 to SCA-999)
+- **Dependencies**: Vulnerable packages, unpinned versions, malicious packages
+- **SBOM**: Missing Software Bill of Materials, EO 14028 compliance
+- **Integrity**: Hash verification, reproducible builds, registry security
+
+### AI Agent Security (SCA-1000 to SCA-2000)
+- **MCP Security**: Unrestricted tool access, prompt injection via tools, missing auth
+- **In-Repo Agents**: Secrets in prompts, PII in examples, unsafe tool implementations
+- **Model Security**: Model integrity checks, conversation history sanitization
+- **LLM Attacks**: Jailbreaking (DAN, roleplay, encoding), token smuggling, context stuffing
+
+### Documentation & Compliance (SCA-500 to SCA-599)
+- **Missing Documentation**: Security-critical functions, API endpoints, CLI commands
+- **Configuration**: Environment variables, schemas, examples
+- **Standards Compliance**: NIST 800-53, OWASP Top 10, PCI-DSS, HIPAA, GDPR, ISO 27001
 
 ---
 
