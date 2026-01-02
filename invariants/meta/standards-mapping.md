@@ -58,7 +58,8 @@ Each finding MUST include at least one of the following:
 - **SCA-600 to SCA-699**: Language-specific issues
 - **SCA-700 to SCA-799**: Compliance and governance
 - **SCA-800 to SCA-899**: Infrastructure and deployment
-- **SCA-900 to SCA-999**: Reserved for future use
+- **SCA-900 to SCA-999**: Supply chain and dependencies
+- **SCA-1000 to SCA-2000**: AI Agents and MCP (Model Context Protocol) Security
 
 ---
 
@@ -352,6 +353,194 @@ Also create: docs/man/custom-tool.1
 | 6.4.2 | Automated security testing | (SCA audit workflow) |
 | 8.3.6 | Authentication mechanisms | global.md |
 | 11.3.1 | External penetration testing | (SCA as automated testing) |
+
+### NIST SP 800-53 Rev 5 (Security and Privacy Controls)
+
+**Control Families Mapped to SCA Invariants**:
+
+| Family | Title | Key Controls | SCA Invariants |
+|--------|-------|--------------|----------------|
+| **AC** | Access Control | AC-2 (Account Management), AC-3 (Access Enforcement), AC-6 (Least Privilege), AC-7 (Login Attempts), AC-11 (Session Lock) | **authentication.md** (NEW), global.md |
+| **AU** | Audit and Accountability | AU-2 (Event Logging), AU-3 (Content of Audit Records), AU-6 (Audit Review), AU-9 (Protection of Audit Info) | data-protection/logging.md, **audit-logging.md** (NEW) |
+| **AT** | Awareness and Training | AT-2 (Training), AT-3 (Role-based Training) | documentation/completeness.md |
+| **CA** | Assessment, Authorization | CA-2 (Security Assessments), CA-7 (Continuous Monitoring) | (SCA audit workflow) |
+| **CM** | Configuration Management | CM-2 (Baseline Config), CM-3 (Change Control), CM-6 (Configuration Settings), CM-7 (Least Functionality) | **configuration-management.md** (NEW) |
+| **CP** | Contingency Planning | CP-9 (Backup), CP-10 (System Recovery) | (operational controls) |
+| **IA** | Identification and Authentication | IA-2 (User Identification), IA-5 (Authenticator Management), IA-8 (Identification Assertion) | **authentication.md** (NEW), crypto/secrets.md |
+| **IR** | Incident Response | IR-4 (Incident Handling), IR-5 (Monitoring), IR-6 (Reporting) | **incident-response.md** (NEW) |
+| **MA** | Maintenance | MA-2 (Controlled Maintenance), MA-4 (Remote Maintenance) | (operational controls) |
+| **MP** | Media Protection | MP-6 (Media Sanitization) | **media-protection.md** (NEW) |
+| **PS** | Personnel Security | PS-7 (Third-Party Personnel) | (organizational controls) |
+| **PE** | Physical Protection | PE-2 (Physical Access), PE-3 (Access Control) | (physical controls, limited code audit) |
+| **PL** | Planning | PL-2 (System Security Plan), PL-8 (Security Architecture) | documentation/completeness.md |
+| **PM** | Program Management | PM-11 (Mission/Business Focus) | (organizational controls) |
+| **RA** | Risk Assessment | RA-3 (Risk Assessment), RA-5 (Vulnerability Monitoring) | (SCA audit workflow), **risk-assessment.md** (NEW) |
+| **SA** | System and Services Acquisition | SA-8 (Security Engineering), SA-11 (Developer Testing), SA-12 (Supply Chain Protection), SA-15 (Development Process) | **supply-chain.md** (NEW), documentation/completeness.md |
+| **SC** | System and Communications Protection | SC-7 (Boundary Protection), SC-8 (Transmission Confidentiality), SC-12 (Cryptographic Key Establishment), SC-13 (Cryptographic Protection), SC-28 (Protection of Info at Rest) | global.md (TLS/SSL), crypto/*.md, data-protection/database.md |
+| **SI** | System and Information Integrity | SI-3 (Malicious Code Protection), SI-4 (System Monitoring), SI-7 (Software Integrity), SI-10 (Information Input Validation), SI-16 (Memory Protection) | global.md (injection, validation), languages/c-cpp.md, **supply-chain.md** (NEW) |
+| **SR** | Supply Chain Risk Management | SR-3 (Supply Chain Controls), SR-4 (Provenance), SR-5 (Acquisition Strategies), SR-6 (Supplier Assessments), SR-11 (Component Authenticity) | **supply-chain.md** (NEW) |
+| **PT** | Privacy Controls | PT-2 (Authority to Process PII), PT-3 (PII Processing Purposes), PT-5 (Privacy Notice), PT-6 (System of Records Notice), PT-7 (Redress) | **privacy.md** (NEW), data-protection/*.md |
+
+**Critical Controls Requiring New Invariants**:
+- **AC-3**: Access enforcement - Need access-control.md
+- **IA-5**: Authenticator management - Need authentication.md
+- **AU-2/AU-9**: Comprehensive audit logging - Need audit-logging.md
+- **SA-12/SR-3**: Supply chain protection - Need supply-chain.md
+- **PT-2/PT-3**: PII processing - Need privacy.md
+- **CM-6/CM-7**: Configuration hardening - Need configuration-management.md
+
+### NIST Cybersecurity Framework (CSF) 2.0
+
+**Six Core Functions Mapped to SCA**:
+
+| Function | Categories | SCA Coverage |
+|----------|-----------|--------------|
+| **GOVERN (GV)** | Organizational cybersecurity strategy, expectations, policy | documentation/completeness.md, **governance.md** (NEW) |
+| **IDENTIFY (ID)** | Asset Management (ID.AM), Risk Assessment (ID.RA), Supply Chain (ID.SC) | **asset-inventory.md** (NEW), **supply-chain.md** (NEW) |
+| **PROTECT (PR)** | Access Control (PR.AC), Data Security (PR.DS), Platform Security (PR.PS) | **authentication.md** (NEW), crypto/*.md, data-protection/*.md, global.md |
+| **DETECT (DE)** | Continuous Monitoring (DE.CM), Adverse Event Analysis (DE.AE) | data-protection/logging.md, **detection.md** (NEW) |
+| **RESPOND (RS)** | Incident Management (RS.MA), Incident Analysis (RS.AN), Response Reporting (RS.CO) | **incident-response.md** (NEW) |
+| **RECOVER (RC)** | Incident Recovery (RC.RP), Recovery Communications (RC.CO) | (operational controls) |
+
+**Detailed Mappings**:
+
+**PROTECT Function** (Most relevant for code audit):
+- **PR.AC-1**: Identities and credentials managed → **authentication.md** (NEW), crypto/secrets.md
+- **PR.AC-3**: Remote access managed → global.md (TLS/SSL)
+- **PR.AC-4**: Access permissions managed → **access-control.md** (NEW)
+- **PR.DS-1**: Data at rest protected → data-protection/database.md, crypto/*.md
+- **PR.DS-2**: Data in transit protected → global.md (TLS/SSL)
+- **PR.DS-5**: Protections against data leaks → data-protection/logging.md
+- **PR.DS-6**: Integrity checking mechanisms → **supply-chain.md** (NEW)
+- **PR.PS-1**: Configuration management → **configuration-management.md** (NEW)
+
+**DETECT Function**:
+- **DE.CM-1**: Networks and network services monitored → **detection.md** (NEW)
+- **DE.CM-3**: Personnel activity monitored → data-protection/logging.md
+- **DE.CM-4**: Malicious code detected → **supply-chain.md** (NEW)
+
+### NIST SP 800-171 Rev 2 (Protecting CUI)
+
+**Requirements for Controlled Unclassified Information**:
+
+| Req | Title | SCA Invariants |
+|-----|-------|----------------|
+| **3.1.x** | Access Control | **access-control.md** (NEW), **authentication.md** (NEW) |
+| **3.3.x** | Audit and Accountability | data-protection/logging.md, **audit-logging.md** (NEW) |
+| **3.4.x** | Configuration Management | **configuration-management.md** (NEW) |
+| **3.5.x** | Identification and Authentication | **authentication.md** (NEW), crypto/secrets.md |
+| **3.10.x** | Physical Protection | (physical controls) |
+| **3.11.x** | Risk Assessment | **risk-assessment.md** (NEW) |
+| **3.12.x** | Security Assessment | (SCA audit workflow) |
+| **3.13.x** | System and Communications Protection | global.md (TLS/SSL), crypto/*.md, **cui-protection.md** (NEW) |
+| **3.14.x** | System and Information Integrity | global.md (validation), languages/*.md, **system-integrity.md** (NEW) |
+
+**CUI-Specific Requirements**:
+- **3.13.11**: Cryptographic mechanisms to protect CUI → crypto/WEAK_ALGORITHMS.md, data-protection/database.md
+- **3.13.16**: Protect CUI at rest → data-protection/database.md, **cui-protection.md** (NEW)
+- **3.14.1**: Identify and manage flaws → **supply-chain.md** (NEW)
+- **3.14.2**: Identify malicious content → **supply-chain.md** (NEW)
+- **3.14.3**: Monitor system security alerts → **detection.md** (NEW)
+
+### NIST AI Risk Management Framework (AI RMF)
+
+**Four Core Functions for AI Systems** (Critical for LLM invariants):
+
+| Function | Activities | SCA Invariants |
+|----------|-----------|----------------|
+| **GOVERN** | Policies, processes, and procedures for AI governance and oversight | llm/global.md, **ai-governance.md** (NEW) |
+| **MAP** | Context establishment, categorization, risk identification | llm/global.md, **ai-risk-mapping.md** (NEW) |
+| **MEASURE** | AI system testing, evaluation, validation, and verification (TEVV) | llm/global.md (testing), **ai-metrics.md** (NEW) |
+| **MANAGE** | Risk response, monitoring, and continuous improvement | llm/global.md, **ai-monitoring.md** (NEW) |
+
+**Key AI Risks Mapped**:
+- **GOVERN-1.1**: Legal/regulatory requirements identified → llm/global.md (compliance)
+- **GOVERN-1.2**: AI risk management responsibilities assigned → **ai-governance.md** (NEW)
+- **MAP-1.1**: AI system context documented → **ai-risk-mapping.md** (NEW)
+- **MAP-2.1**: System categorization → llm/global.md
+- **MAP-3.1**: AI capabilities documented → documentation/completeness.md
+- **MEASURE-1.1**: Evaluation metrics defined → **ai-metrics.md** (NEW)
+- **MEASURE-2.1**: AI system tested for trustworthiness → llm/global.md (jailbreaking tests)
+- **MANAGE-1.1**: Risks prioritized and responded to → llm/global.md
+
+**Current LLM Coverage** (llm/global.md):
+- ✅ Prompt injection (MAP-2.3, MEASURE-2.1)
+- ✅ Jailbreaking detection (MEASURE-2.1)
+- ✅ Output validation (MANAGE-2.1)
+- ⚠️ Missing: Model governance documentation (GOVERN-1.2)
+- ⚠️ Missing: Continuous monitoring hooks (MANAGE-4.1)
+
+### NIST Secure Software Development Framework (SSDF)
+
+**Practices Mapped to SCA**:
+
+| Practice | Description | SCA Invariants |
+|----------|-------------|----------------|
+| **PO.1** | Prepare: Define security requirements | documentation/completeness.md, **requirements.md** (NEW) |
+| **PO.3** | Prepare: Implement supporting toolchains | (SCA audit tooling) |
+| **PO.5** | Prepare: Maintain secure environments | **configuration-management.md** (NEW) |
+| **PS.1** | Protect Software: Protect code from unauthorized access | **access-control.md** (NEW) |
+| **PS.2** | Protect Software: Provide verification for acquired software | **supply-chain.md** (NEW) |
+| **PS.3** | Protect Software: Archive and protect software | **media-protection.md** (NEW) |
+| **PW.1** | Produce: Design software securely | documentation/completeness.md (architecture) |
+| **PW.2** | Produce: Review human-readable code | documentation/completeness.md (code review) |
+| **PW.4** | Produce: Reuse existing software | **supply-chain.md** (NEW - dependency analysis) |
+| **PW.5** | Produce: Create source code by trained developers | (organizational control) |
+| **PW.6** | Produce: Configure software securely | **configuration-management.md** (NEW) |
+| **PW.7** | Produce: Review code before release | documentation/completeness.md |
+| **PW.8** | Produce: Test software | documentation/completeness.md (test documentation) |
+| **PW.9** | Produce: Configure tool pipelines securely | **supply-chain.md** (NEW - build integrity) |
+| **RV.1** | Respond: Identify and confirm vulnerabilities | (SCA audit workflow) |
+| **RV.2** | Respond: Assess, prioritize, remediate | (SUGGESTIONS.md, OVERRIDE.md workflow) |
+| **RV.3** | Respond: Analyze root causes | (audit reports) |
+
+### FIPS Standards
+
+**Federal Information Processing Standards**:
+
+| FIPS | Title | SCA Invariants |
+|------|-------|----------------|
+| **FIPS 140-2/140-3** | Cryptographic Module Validation | crypto/WEAK_ALGORITHMS.md, crypto/secrets.md |
+| **FIPS 180-4** | Secure Hash Standard (SHA-256, SHA-512) | crypto/WEAK_ALGORITHMS.md (flags MD5, SHA-1) |
+| **FIPS 186-5** | Digital Signature Standard (DSA, ECDSA, EdDSA) | crypto/WEAK_ALGORITHMS.md (weak key sizes) |
+| **FIPS 197** | Advanced Encryption Standard (AES) | crypto/WEAK_ALGORITHMS.md (flags DES, 3DES) |
+| **FIPS 199** | Security Categorization | **risk-assessment.md** (NEW) |
+| **FIPS 200** | Minimum Security Requirements | (all invariants collectively) |
+| **FIPS 201-3** | PIV for Federal Employees | **authentication.md** (NEW - credential management) |
+
+**FIPS 140-2/140-3 Approved Algorithms**:
+- ✅ **Approved**: AES, SHA-256/384/512, RSA (2048+), ECDSA (P-256+), HMAC, PBKDF2
+- ❌ **Disapproved**: DES, 3DES, MD5, SHA-1, RSA < 2048
+
+Detected by: `crypto/WEAK_ALGORITHMS.md`
+
+### NIST SP 800-63-3 (Digital Identity Guidelines)
+
+**Authentication Assurance Levels (AAL)**:
+
+| AAL | Requirements | SCA Checks |
+|-----|-------------|------------|
+| **AAL1** | Single-factor authentication | **authentication.md** (NEW - password requirements) |
+| **AAL2** | Multi-factor authentication | **authentication.md** (NEW - MFA detection) |
+| **AAL3** | Hardware-based authenticator | **authentication.md** (NEW - hardware token usage) |
+
+**Authenticator Types**:
+- **Memorized Secret** (passwords) → Check strength, storage (crypto/secrets.md, **authentication.md**)
+- **Look-up Secret** (OTP) → Check secure generation (crypto/secrets.md)
+- **Out-of-Band** (SMS, push) → Check channel security (global.md TLS)
+- **Single-Factor OTP** → Check TOTP/HOTP implementation (**authentication.md**)
+- **Multi-Factor** → Check MFA enforcement (**authentication.md**)
+
+**Identity Assurance Levels (IAL)**:
+- **IAL1**: Self-asserted identity
+- **IAL2**: Remote identity proofing
+- **IAL3**: In-person identity proofing
+
+**Federation Assurance Levels (FAL)**:
+- **FAL1**: Bearer assertion
+- **FAL2**: Proof of possession
+
+Mapped to: **authentication.md** (NEW)
 
 ---
 
