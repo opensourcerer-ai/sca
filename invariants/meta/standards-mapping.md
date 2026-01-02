@@ -53,6 +53,28 @@ Each finding MUST include at least one of the following:
 | SCA-805 | Missing Attestation Key provisioning | High | TPM & Attestation | Active |
 | SCA-806 | TPM 1.2 usage (deprecated) | Medium | TPM & Attestation | Active |
 | SCA-807 | Missing Confidential Computing attestation | Medium | TPM & Attestation | Active |
+| SCA-851 | Running container as root | Critical | Container Security | Active |
+| SCA-852 | Privileged container | Critical | Container Security | Active |
+| SCA-853 | Host path mounts | High | Container Security | Active |
+| SCA-854 | Excessive capabilities | High | Container Security | Active |
+| SCA-855 | Missing security policies (seccomp/AppArmor/SELinux) | Medium | Container Security | Active |
+| SCA-856 | Secrets in container images | Critical | Container Security | Active |
+| SCA-857 | Missing network policies | Medium | Container Security | Active |
+| SCA-858 | Overly permissive RBAC | High | Container Security | Active |
+| SCA-859 | Missing resource limits | Medium | Container Security | Active |
+| SCA-860 | Insecure container registry | High | Container Security | Active |
+| SCA-861 | Pod Security Standards not enforced | High | Container Security | Active |
+| SCA-870 | Insecure protocol usage (HTTP) | Critical | Network Security | Active |
+| SCA-871 | TLS certificate validation bypass | Critical | Network Security | Active |
+| SCA-872 | Weak TLS configuration | Critical | Network Security | Active |
+| SCA-873 | Server-Side Request Forgery (SSRF) | Critical | Network Security | Active |
+| SCA-874 | Insecure server binding | High | Network Security | Active |
+| SCA-875 | Missing network timeouts | High | Network Security | Active |
+| SCA-876 | Hardcoded IP addresses/hostnames | Medium | Network Security | Active |
+| SCA-877 | DNS rebinding vulnerability | Medium | Network Security | Active |
+| SCA-878 | Insecure WebSocket configuration | Medium | Network Security | Active |
+| SCA-879 | Insecure gRPC configuration | Medium | Network Security | Active |
+| SCA-880 | Verbose network error messages | Low | Network Security | Active |
 
 ### Reserved Blocks
 
