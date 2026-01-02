@@ -1,0 +1,256 @@
+.TH SCA-BOOTSTRAP 1 "2026-01-02" "SCA 1.0" "Security Control Agent Manual"
+.SH NAME
+sca-bootstrap \- Initialize control directory for security audits
+.SH SYNOPSIS
+.B sca bootstrap
+.RI [ OPTIONS ]
+.SH DESCRIPTION
+.B sca bootstrap
+initializes the control directory (default: sec-ctrl/) with:
+.IP \(bu 2
+Default configuration files
+.IP \(bu 2
+Documentation and templates
+.IP \(bu 2
+Directory structure for reports and state
+.IP \(bu 2
+README explaining the control directory layout
+.PP
+This command must be run once before the first audit. It is safe to run
+multiple times (existing files are preserved by default).
+.SH OPTIONS
+.TP
+.BR \-\-force
+Overwrite existing files. Creates backups before overwriting.
+.TP
+.BR \-\-repo " " \fIPATH\fR
+Repository path (default: current directory)
+.TP
+.BR \-\-ctrl-dir " " \fIPATH\fR
+Control directory path (default: sec-ctrl/)
+.SH CREATED STRUCTURE
+.PP
+Bootstrap creates the following structure:
+.PP
+.nf
+.RS
+sec-ctrl/
+├── README.md
+│   Overview of control directory purpose and layout
+├── OVERRIDE.md
+│   User-maintained list of accepted risks (template with examples)
+├── SUGGESTIONS.md
+│   Auto-generated remediation suggestions (placeholder)
+├── config/
+│   └── ignore.paths
+│       Default exclusion patterns (node_modules/, .git/, etc.)
+├── invariants/
+│   └── local-overrides.md.example
+│       Example of custom security invariants (optional)
+├── state/
+│   ├── last-run.txt
+│   │   Timestamp of last audit
+│   ├── repo-fingerprint.txt
+│   │   Git SHA of last audited commit
+│   └── scope-hash.txt
+│       SHA256 hash of file scope (for incremental mode)
+├── reports/
+│   ├── security-audit.latest.md
+│   │   Most recent audit report (Markdown)
+│   ├── security-audit.latest.json
+│   │   Most recent audit report (JSON)
+│   └── deps/
+│       Dependency scan results (if --enable-deps used)
+└── cache/
+    └── last-scope.txt
+        Cached file list from last scope generation
+.RE
+.fi
+.SH EXAMPLES
+.PP
+Initialize control directory in current repository:
+.PP
+.nf
+.RS
+$ cd /path/to/repo
+$ sca bootstrap
+.RE
+.fi
+.PP
+Initialize with custom control directory:
+.PP
+.nf
+.RS
+$ sca bootstrap --ctrl-dir /var/security/my-project
+.RE
+.fi
+.PP
+Reinitialize (overwrite existing files):
+.PP
+.nf
+.RS
+$ sca bootstrap --force
+.RE
+.fi
+.PP
+Bootstrap external repository:
+.PP
+.nf
+.RS
+$ sca bootstrap --repo /path/to/other/repo
+.RE
+.fi
+.SH FORCE MODE
+.PP
+When using --force:
+.IP 1. 3
+Existing files are backed up to sec-ctrl.backup.TIMESTAMP/
+.IP 2. 3
+Templates are re-copied from agent directory
+.IP 3. 3
+User files (OVERRIDE.md, ignore.paths) are preserved in backup
+.IP 4. 3
+State files (last-run.txt, hashes) are reset
+.PP
+Use --force carefully to avoid losing manual edits to OVERRIDE.md.
+.SH CUSTOMIZATION
+.PP
+After bootstrap, customize:
+.SS Custom Exclusions
+.PP
+Edit sec-ctrl/config/ignore.paths:
+.PP
+.nf
+.RS
+# Add your exclusions
+vendor/
+third_party/
+*.generated.go
+.RE
+.fi
+.SS Override Rules
+.PP
+Edit sec-ctrl/OVERRIDE.md to suppress accepted findings:
+.PP
+.nf
+.RS
+# Override: Test API key
+# File: tests/fixtures/key.json
+# Reason: Mock credential, not production
+# Approved: Security Team, 2024-01-15
+# Review: 2025-01-15
+tests/fixtures/key.json
+.RE
+.fi
+.SS Local Invariants (Advanced)
+.PP
+Create sec-ctrl/invariants/local-overrides.md to add custom security checks:
+.PP
+.nf
+.RS
+# Custom Invariant: Require specific license header
+
+All source files MUST include license header.
+
+Pattern to detect:
+    Files without "Copyright (c) 2024" in first 5 lines
+
+Severity: Low
+.RE
+.fi
+.SH GIT INTEGRATION
+.PP
+Recommended .gitignore entries:
+.PP
+.nf
+.RS
+# Commit control directory structure and config
+sec-ctrl/README.md
+sec-ctrl/OVERRIDE.md
+sec-ctrl/config/
+
+# Do NOT commit reports (may contain sensitive code snippets)
+sec-ctrl/reports/
+sec-ctrl/state/
+sec-ctrl/cache/
+sec-ctrl/SUGGESTIONS.md
+.RE
+.fi
+.PP
+OVERRIDE.md should be committed to track accepted risks in version control.
+.SH VERIFICATION
+.PP
+After bootstrap, verify structure:
+.PP
+.nf
+.RS
+$ ls -la sec-ctrl/
+$ cat sec-ctrl/README.md
+$ sca scope  # Test file scoping works
+.RE
+.fi
+.SH MIGRATION
+.PP
+If migrating from an older SCA version:
+.IP 1. 3
+Backup existing sec-ctrl/: cp -r sec-ctrl/ sec-ctrl.old/
+.IP 2. 3
+Run: sca bootstrap --force
+.IP 3. 3
+Restore OVERRIDE.md: cp sec-ctrl.old/OVERRIDE.md sec-ctrl/
+.IP 4. 3
+Verify: sca audit
+.SH TROUBLESHOOTING
+.TP
+.B "Permission denied" when creating sec-ctrl/
+Ensure write permissions in repository directory:
+.PP
+.nf
+.RS
+$ chmod u+w .
+.RE
+.fi
+.TP
+.B "Directory already exists" error
+Use --force to overwrite, or remove existing directory:
+.PP
+.nf
+.RS
+$ rm -rf sec-ctrl/
+$ sca bootstrap
+.RE
+.fi
+.TP
+.B "Could not find template directory"
+Verify agent installation:
+.PP
+.nf
+.RS
+$ ls /opt/sca/templates/
+$ echo $SEC_AUDIT_AGENT_HOME
+.RE
+.fi
+.SH SECURITY
+.PP
+The control directory contains:
+.IP \(bu 2
+Configuration (low sensitivity)
+.IP \(bu 2
+State files (low sensitivity)
+.IP \(bu 2
+Reports (HIGH sensitivity - may contain code snippets)
+.PP
+Do NOT commit reports/ to public repositories. Use .gitignore to exclude them.
+.SH FILES
+.TP
+.I /opt/sca/templates/sec-ctrl/
+Template files copied during bootstrap
+.TP
+.I sec-ctrl.backup.TIMESTAMP/
+Backup directory created when using --force
+.SH SEE ALSO
+.BR sca (1),
+.BR sca-audit (1),
+.BR sca-scope (1)
+.SH BUGS
+Report bugs at https://github.com/your-org/sca/issues

@@ -1,0 +1,249 @@
+.TH SCA 1 "2026-01-02" "SCA 1.0" "Security Control Agent Manual"
+.SH NAME
+sca \- Security Control Agent for invariant-driven security auditing
+.SH SYNOPSIS
+.B sca
+.RI [ OPTIONS ]
+.I COMMAND
+.RI [ ARGS ]
+.SH DESCRIPTION
+.B sca
+is a read-only, invariant-driven security auditing tool that analyzes codebases
+for security vulnerabilities without modifying the subject repository. It uses
+predefined security invariants to detect issues across multiple languages and
+security domains.
+.PP
+All analysis artifacts are written to a control directory (default: sec-ctrl/)
+within the subject repository, maintaining complete separation from the codebase.
+.SH COMMANDS
+.TP
+.B audit
+Run comprehensive security audit on repository. Generates detailed report with
+findings categorized by severity (Critical, High, Medium, Low). See
+.BR sca-audit (1)
+for details.
+.TP
+.B scope
+Print file scope that will be analyzed. Useful for verifying exclusions and
+understanding what code will be audited. See
+.BR sca-scope (1)
+for details.
+.TP
+.B diff
+Compare current audit report with previous run to track security drift over time.
+Shows added/removed/changed findings. See
+.BR sca-diff (1)
+for details.
+.TP
+.B bootstrap
+Initialize control directory (sec-ctrl/) with default configuration, templates,
+and documentation. Required before first audit. See
+.BR sca-bootstrap (1)
+for details.
+.SH OPTIONS
+.TP
+.BR \-h ", " \-\-help
+Show help message and exit
+.SH GLOBAL OPTIONS
+These options work with all commands:
+.TP
+.BR \-\-repo " " \fIPATH\fR
+Repository path to audit (default: current directory)
+.TP
+.BR \-\-ctrl-dir " " \fIPATH\fR
+Control directory path (default: sec-ctrl/). Can be absolute or relative to repo.
+.TP
+.BR \-\-agent-dir " " \fIPATH\fR
+Agent installation directory (default: auto-detect from /opt/sca or
+SEC_AUDIT_AGENT_HOME environment variable)
+.SH ENVIRONMENT
+.TP
+.B SEC_CTRL_DIR
+Default control directory path (overridden by --ctrl-dir)
+.TP
+.B SEC_AUDIT_AGENT_HOME
+Default agent installation path (overridden by --agent-dir)
+.TP
+.B SCA_LOG_LEVEL
+Logging verbosity: 0=errors only, 1=info (default), 2=debug
+.SH EXIT STATUS
+.TP
+.B 0
+No critical or high severity findings detected (safe to proceed)
+.TP
+.B 2
+Critical or high severity findings exist (should block CI/CD pipeline)
+.TP
+.B 3
+Audit incomplete due to configuration error or missing dependencies
+.TP
+.B 4
+Agent directory is not immutable (writable or git-dirty), security violation
+.TP
+.B 5
+Internal error during audit execution
+.SH EXAMPLES
+.PP
+Initialize control directory in current repository:
+.PP
+.nf
+.RS
+$ cd /path/to/repo
+$ sca bootstrap
+.RE
+.fi
+.PP
+Run security audit with verbose output:
+.PP
+.nf
+.RS
+$ sca audit --verbose
+.RE
+.fi
+.PP
+Run audit with dependency scanning enabled:
+.PP
+.nf
+.RS
+$ sca audit --enable-deps
+.RE
+.fi
+.PP
+Check file scope before auditing:
+.PP
+.nf
+.RS
+$ sca scope
+.RE
+.fi
+.PP
+Compare current audit with previous run:
+.PP
+.nf
+.RS
+$ sca diff
+.RE
+.fi
+.PP
+Audit external repository with custom control directory:
+.PP
+.nf
+.RS
+$ sca audit --repo /path/to/other/repo --ctrl-dir /var/security/audit
+.RE
+.fi
+.SH FILES
+.TP
+.I sec-ctrl/
+Control directory containing all audit artifacts
+.TP
+.I sec-ctrl/config/ignore.paths
+File patterns to exclude from analysis (one per line)
+.TP
+.I sec-ctrl/OVERRIDE.md
+User-maintained list of accepted risks and false positives
+.TP
+.I sec-ctrl/SUGGESTIONS.md
+Auto-generated remediation suggestions (regenerated each audit)
+.TP
+.I sec-ctrl/reports/security-audit.latest.md
+Most recent audit report in Markdown format
+.TP
+.I sec-ctrl/reports/security-audit.latest.json
+Most recent audit report in JSON format
+.TP
+.I sec-ctrl/state/
+Internal state files (hashes, timestamps, fingerprints)
+.SH SECURITY
+.SS Hard Constraints
+.TP
+1.
+Subject repository is NEVER modified by SCA
+.TP
+2.
+All writes go to control directory (sec-ctrl/)
+.TP
+3.
+Agent directory must be immutable (read-only, git-clean)
+.TP
+4.
+Control directory and agent directory are excluded from analysis scope
+.TP
+5.
+Every finding must cite evidence (file path + line context)
+.SS Invariants
+SCA uses 150+ security invariants covering:
+.IP \(bu 2
+OWASP Top 10 (web application security)
+.IP \(bu 2
+CWE Top 25 (common weakness enumeration)
+.IP \(bu 2
+Language-specific issues (C/C++, Go, Java, Python, JavaScript, Rust)
+.IP \(bu 2
+Cryptographic vulnerabilities (weak algorithms, key exposure)
+.IP \(bu 2
+LLM/AI security (OWASP LLM Top 10, jailbreaking)
+.IP \(bu 2
+Data protection (PII in logs, unencrypted databases)
+.IP \(bu 2
+Compliance requirements (PCI-DSS, HIPAA, GDPR, SOC 2)
+.SH WORKFLOW
+.SS First-Time Setup
+.IP 1. 3
+Install SCA agent to read-only directory (recommended: /opt/sca)
+.IP 2. 3
+Navigate to repository: cd /path/to/repo
+.IP 3. 3
+Initialize control directory: sca bootstrap
+.IP 4. 3
+Run initial audit: sca audit
+.IP 5. 3
+Review findings: cat sec-ctrl/SUGGESTIONS.md
+.SS Managing Findings
+.PP
+For each finding, choose one of two options:
+.PP
+.B Option 1: Fix the Issue
+.RS
+Implement remediation from SUGGESTIONS.md, commit fix, re-run audit to verify.
+.RE
+.PP
+.B Option 2: Accept Risk (Override)
+.RS
+Add entry to sec-ctrl/OVERRIDE.md with justification, approver, and review date.
+Finding will be suppressed in future audits.
+.RE
+.SS CI/CD Integration
+.IP 1. 3
+Add audit step to pipeline: sca audit
+.IP 2. 3
+Exit code 2 will fail build if Critical/High findings exist
+.IP 3. 3
+Upload sec-ctrl/SUGGESTIONS.md as artifact for review
+.IP 4. 3
+Periodic review of sec-ctrl/OVERRIDE.md (quarterly recommended)
+.SH COMPATIBILITY
+.TP
+.B Supported Languages
+C, C++, Go, Java, Python, JavaScript, TypeScript, Rust, Shell scripts
+.TP
+.B Supported Platforms
+Linux, macOS (requires bash, git, python3)
+.TP
+.B Version Control
+Git repositories (required for accurate file scoping)
+.SH SEE ALSO
+.BR sca-audit (1),
+.BR sca-scope (1),
+.BR sca-diff (1),
+.BR sca-bootstrap (1)
+.PP
+Full documentation: /opt/sca/docs/ or https://github.com/your-org/sca
+.SH BUGS
+Report bugs at https://github.com/your-org/sca/issues
+.PP
+Security vulnerabilities: security@example.com
+.SH AUTHORS
+Built for safety-critical environments with strict compliance requirements.
+.SH COPYRIGHT
+Copyright \(co 2024-2026. Licensed under [Your License].

@@ -1,0 +1,305 @@
+.TH SCA-AUDIT 1 "2026-01-02" "SCA 1.0" "Security Control Agent Manual"
+.SH NAME
+sca-audit \- Run comprehensive security audit on repository
+.SH SYNOPSIS
+.B sca audit
+.RI [ OPTIONS ]
+.SH DESCRIPTION
+.B sca audit
+performs a comprehensive security analysis of a codebase using predefined
+security invariants. The audit is read-only and generates detailed reports
+without modifying the subject repository.
+.PP
+The audit process:
+.IP 1. 3
+Determines file scope (respecting exclusions)
+.IP 2. 3
+Reads security invariants from agent directory
+.IP 3. 3
+Analyzes code using AI model with invariant context
+.IP 4. 3
+Generates markdown and JSON reports
+.IP 5. 3
+Applies override rules from OVERRIDE.md
+.IP 6. 3
+Generates remediation suggestions (SUGGESTIONS.md)
+.IP 7. 3
+Returns appropriate exit code for CI/CD
+.SH OPTIONS
+.TP
+.BR \-\-verbose ", " \-v
+Enable verbose logging (sets SCA_LOG_LEVEL=2)
+.TP
+.BR \-\-enable-deps
+Run optional dependency scanners (npm audit, pip-audit, cargo audit, govulncheck).
+Results stored in sec-ctrl/reports/deps/
+.TP
+.BR \-\-incremental
+Skip audit if repository unchanged since last run (based on scope hash).
+Exit 0 immediately if no changes detected.
+.TP
+.BR \-\-format " " \fIFORMAT\fR
+Output format: md (Markdown only), json (JSON only), both (default)
+.TP
+.BR \-\-repo " " \fIPATH\fR
+Repository path to audit (default: current directory)
+.TP
+.BR \-\-ctrl-dir " " \fIPATH\fR
+Control directory path (default: sec-ctrl/)
+.TP
+.BR \-\-agent-dir " " \fIPATH\fR
+Agent installation directory (default: auto-detect)
+.SH EXIT STATUS
+.TP
+.B 0
+No critical or high severity findings (pass)
+.TP
+.B 2
+Critical or high severity findings exist (fail - should block merge)
+.TP
+.B 3
+Audit incomplete (configuration error, missing dependencies)
+.TP
+.B 4
+Agent not immutable (writable directory or git-dirty state)
+.TP
+.B 5
+Internal error during audit execution
+.SH EXAMPLES
+.PP
+Run basic audit on current directory:
+.PP
+.nf
+.RS
+$ sca audit
+.RE
+.fi
+.PP
+Run audit with dependency scanning and verbose output:
+.PP
+.nf
+.RS
+$ sca audit --enable-deps --verbose
+.RE
+.fi
+.PP
+Run incremental audit (skip if unchanged):
+.PP
+.nf
+.RS
+$ sca audit --incremental
+.RE
+.fi
+.PP
+Audit external repository:
+.PP
+.nf
+.RS
+$ sca audit --repo /path/to/other/repo
+.RE
+.fi
+.PP
+Use custom control directory:
+.PP
+.nf
+.RS
+$ sca audit --ctrl-dir /var/security/project-audit
+.RE
+.fi
+.SH AUDIT REPORT STRUCTURE
+.PP
+The generated report (sec-ctrl/reports/security-audit.latest.md) contains:
+.IP \(bu 2
+Executive Summary (overall risk score, finding counts)
+.IP \(bu 2
+Findings (Confirmed) - Organized by severity:
+.RS
+.IP \(bu 2
+Critical - Immediate action required
+.IP \(bu 2
+High - Fix before production deployment
+.IP \(bu 2
+Medium - Address in next sprint
+.IP \(bu 2
+Low - Fix when convenient
+.RE
+.IP \(bu 2
+Findings (Needs Review) - Suspicious patterns requiring manual verification
+.IP \(bu 2
+Evidence - File path, line number, code snippet for each finding
+.IP \(bu 2
+Remediation - Specific fix recommendations
+.IP \(bu 2
+Compliance Mapping - PCI-DSS, HIPAA, GDPR, SOC 2 requirements
+.SH OVERRIDE SYSTEM
+.PP
+To suppress findings (accepted risks or false positives):
+.IP 1. 3
+Edit sec-ctrl/OVERRIDE.md
+.IP 2. 3
+Add entry with file path or pattern, reason, approver, review date
+.IP 3. 3
+Re-run audit - finding will be excluded
+.PP
+Example override entry:
+.PP
+.nf
+.RS
+# Override: Mock API key in test fixture
+# File: tests/fixtures/api_key.json
+# Reason: Test-only credential, not used in production
+# Approved: Security Team (Alice), 2024-01-15
+# Review: 2025-01-15
+tests/fixtures/api_key.json
+.RE
+.fi
+.SH SUGGESTIONS
+.PP
+After each audit, SUGGESTIONS.md is automatically generated with:
+.IP \(bu 2
+All confirmed findings (excluding overrides)
+.IP \(bu 2
+Concrete remediation steps
+.IP \(bu 2
+Code examples showing fixes
+.IP \(bu 2
+Prioritized by severity
+.PP
+Use SUGGESTIONS.md to:
+.IP \(bu 2
+Create GitHub/Jira issues
+.IP \(bu 2
+Assign fixes to team members
+.IP \(bu 2
+Track remediation progress
+.SH DEPENDENCY SCANNING
+.PP
+When --enable-deps is used, SCA runs:
+.TP
+.B npm audit
+If package.json exists (Node.js projects)
+.TP
+.B pip-audit
+If requirements.txt or pyproject.toml exists (Python projects)
+.TP
+.B cargo audit
+If Cargo.toml exists (Rust projects)
+.TP
+.B govulncheck
+If go.mod exists (Go projects)
+.PP
+Results stored in sec-ctrl/reports/deps/ with timestamp.
+.SH INCREMENTAL MODE
+.PP
+Use --incremental to skip audit if repository unchanged:
+.IP 1. 3
+Computes scope hash (SHA256 of all file paths and mtimes)
+.IP 2. 3
+Compares with sec-ctrl/state/scope-hash.txt
+.IP 3. 3
+If identical, exit 0 immediately (no LLM call)
+.IP 4. 3
+If changed, run full audit and update hash
+.PP
+Useful for:
+.IP \(bu 2
+CI builds on branches without code changes
+.IP \(bu 2
+Scheduled nightly audits (skip if no commits)
+.IP \(bu 2
+Reducing API costs in development
+.SH PERFORMANCE
+.PP
+Typical audit times (depends on codebase size and complexity):
+.IP \(bu 2
+Small project (< 1K lines): 30-60 seconds
+.IP \(bu 2
+Medium project (1K-10K lines): 1-3 minutes
+.IP \(bu 2
+Large project (10K-100K lines): 3-10 minutes
+.IP \(bu 2
+Very large project (> 100K lines): 10-30 minutes
+.PP
+Use --incremental to avoid repeated audits on unchanged code.
+.SH TROUBLESHOOTING
+.TP
+.B "Agent dir is writable" (Exit 4)
+Make agent directory read-only:
+.PP
+.nf
+.RS
+$ sudo chmod -R a-w /opt/sca
+.RE
+.fi
+.TP
+.B "Could not resolve agent dir" (Exit 3)
+Set environment variable:
+.PP
+.nf
+.RS
+$ export SEC_AUDIT_AGENT_HOME=/path/to/sca
+.RE
+.fi
+.TP
+.B "No critical/high findings but exit 2"
+Check OVERRIDE.md for syntax errors. Ensure patterns match exactly.
+.TP
+.B "Audit takes too long"
+Add exclusions to sec-ctrl/config/ignore.paths:
+.PP
+.nf
+.RS
+node_modules/
+vendor/
+.venv/
+dist/
+build/
+.RE
+.fi
+.SH FILES
+.TP
+.I sec-ctrl/reports/security-audit.latest.md
+Most recent audit report (Markdown)
+.TP
+.I sec-ctrl/reports/security-audit.latest.json
+Most recent audit report (JSON)
+.TP
+.I sec-ctrl/reports/security-audit.TIMESTAMP.md
+Timestamped audit reports (archived)
+.TP
+.I sec-ctrl/reports/deps/
+Dependency scan results (if --enable-deps used)
+.TP
+.I sec-ctrl/SUGGESTIONS.md
+Auto-generated remediation suggestions
+.TP
+.I sec-ctrl/OVERRIDE.md
+User-maintained override rules
+.TP
+.I sec-ctrl/state/last-run.txt
+Timestamp of last audit
+.TP
+.I sec-ctrl/state/scope-hash.txt
+Hash of file scope (for incremental mode)
+.SH SECURITY
+.PP
+The audit agent runs with:
+.IP \(bu 2
+Read-only access to subject repository
+.IP \(bu 2
+Write access only to control directory
+.IP \(bu 2
+No network access (except LLM API calls)
+.IP \(bu 2
+No privilege escalation
+.PP
+The agent directory must be immutable to prevent tampering with invariants.
+.SH SEE ALSO
+.BR sca (1),
+.BR sca-scope (1),
+.BR sca-diff (1),
+.BR sca-bootstrap (1)
+.PP
+Documentation: /opt/sca/docs/USAGE.md
+.SH BUGS
+Report bugs at https://github.com/your-org/sca/issues

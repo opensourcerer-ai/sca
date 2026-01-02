@@ -1,0 +1,261 @@
+.TH SCA-DIFF 1 "2026-01-02" "SCA 1.0" "Security Control Agent Manual"
+.SH NAME
+sca-diff \- Compare audit reports to track security drift
+.SH SYNOPSIS
+.B sca diff
+.RI [ OPTIONS ]
+.SH DESCRIPTION
+.B sca diff
+compares the current audit report with the previous run to identify changes
+in security posture over time. This enables:
+.IP \(bu 2
+Tracking security drift (new vulnerabilities introduced)
+.IP \(bu 2
+Verifying fixes (vulnerabilities resolved)
+.IP \(bu 2
+Monitoring security trends over time
+.IP \(bu 2
+Identifying regression in security posture
+.PP
+The comparison shows:
+.IP \(bu 2
+Git commit range (previous SHA → current SHA)
+.IP \(bu 2
+Finding count changes by severity (Critical, High, Medium, Low)
+.IP \(bu 2
+New findings introduced
+.IP \(bu 2
+Fixed findings (no longer present)
+.IP \(bu 2
+Changed findings (severity or location updated)
+.SH OPTIONS
+.TP
+.BR \-\-format " " \fIFORMAT\fR
+Output format:
+.RS
+.TP
+.B summary
+Brief summary of changes (default)
+.TP
+.B detailed
+Full line-by-line diff of reports
+.TP
+.B json
+Machine-readable JSON format
+.RE
+.TP
+.BR \-\-repo " " \fIPATH\fR
+Repository path (default: current directory)
+.TP
+.BR \-\-ctrl-dir " " \fIPATH\fR
+Control directory path (default: sec-ctrl/)
+.SH OUTPUT FORMATS
+.SS Summary Format (Default)
+.PP
+Concise overview of changes:
+.PP
+.nf
+.RS
+Drift Summary
+=============
+Commit: a1b2c3d → e4f5g6h
+
+Findings:
+  Critical: 2 → 1 (Δ -1)
+  High:     5 → 3 (Δ -2)
+  Medium:   8 → 10 (Δ +2)
+  Low:      12 → 12 (Δ 0)
+
+Status: Improved (net -1 critical/high)
+.RE
+.fi
+.SS Detailed Format
+.PP
+Full diff showing:
+.IP \(bu 2
+Added findings (new vulnerabilities)
+.IP \(bu 2
+Removed findings (fixed vulnerabilities)
+.IP \(bu 2
+Modified findings (changed severity/location)
+.IP \(bu 2
+Context from both reports
+.SS JSON Format
+.PP
+Machine-readable format with:
+.IP \(bu 2
+previous_commit, current_commit
+.IP \(bu 2
+previous_counts, current_counts (by severity)
+.IP \(bu 2
+added_findings[], removed_findings[], modified_findings[]
+.SH EXAMPLES
+.PP
+Show summary of changes since last audit:
+.PP
+.nf
+.RS
+$ sca diff
+.RE
+.fi
+.PP
+Show detailed diff:
+.PP
+.nf
+.RS
+$ sca diff --format detailed
+.RE
+.fi
+.PP
+Export diff in JSON format:
+.PP
+.nf
+.RS
+$ sca diff --format json > drift.json
+.RE
+.fi
+.PP
+Track drift over multiple commits:
+.PP
+.nf
+.RS
+$ git log --oneline | while read sha msg; do
+  git checkout $sha
+  sca audit --incremental
+  sca diff --format summary
+done
+.RE
+.fi
+.SH DRIFT INTERPRETATION
+.SS Positive Drift (Security Degradation)
+.PP
+Indicates security posture has worsened:
+.IP \(bu 2
+New Critical or High findings introduced
+.IP \(bu 2
+Total finding count increased
+.IP \(bu 2
+Findings severity increased (Medium → High)
+.PP
+Action: Review new findings in SUGGESTIONS.md and fix before deployment.
+.SS Negative Drift (Security Improvement)
+.PP
+Indicates security posture has improved:
+.IP \(bu 2
+Critical or High findings fixed
+.IP \(bu 2
+Total finding count decreased
+.IP \(bu 2
+Findings severity decreased (High → Medium)
+.PP
+Action: Verify fixes are intentional and not due to code removal.
+.SS Zero Drift (No Change)
+.PP
+Security posture unchanged:
+.IP \(bu 2
+Same findings as previous audit
+.IP \(bu 2
+No new vulnerabilities introduced
+.IP \(bu 2
+No fixes applied
+.PP
+Action: Continue regular auditing and remediation.
+.SH USE CASES
+.SS Pull Request Reviews
+.PP
+Compare branch audit with main:
+.PP
+.nf
+.RS
+# On feature branch
+$ sca audit
+$ sca diff
+
+# Fail PR if security degraded
+if [ $? -ne 0 ]; then
+  echo "Security posture degraded - fix before merge"
+  exit 1
+fi
+.RE
+.fi
+.SS Release Validation
+.PP
+Ensure no new vulnerabilities in release candidate:
+.PP
+.nf
+.RS
+$ git checkout v2.0.0-rc1
+$ sca audit
+$ sca diff
+# Verify no new Critical/High findings
+.RE
+.fi
+.SS Security Metrics
+.PP
+Track security trends over time:
+.PP
+.nf
+.RS
+$ sca diff --format json | jq '.current_counts'
+{
+  "critical": 1,
+  "high": 3,
+  "medium": 10,
+  "low": 12
+}
+.RE
+.fi
+.SH REQUIREMENTS
+.PP
+To use diff:
+.IP 1. 3
+Must have run at least one previous audit
+.IP 2. 3
+Previous report must exist in sec-ctrl/reports/
+.IP 3. 3
+Repository must be a git repository (for commit tracking)
+.PP
+If no previous report exists, diff will show an error.
+.SH FILES
+.TP
+.I sec-ctrl/reports/security-audit.latest.md
+Current audit report (compared)
+.TP
+.I sec-ctrl/reports/security-audit.TIMESTAMP.md
+Previous audit reports (archived, used for comparison)
+.TP
+.I sec-ctrl/state/repo-fingerprint.txt
+Git SHA of previous audit
+.SH AUTOMATION
+.PP
+Integrate diff into CI/CD pipeline:
+.PP
+.nf
+.RS
+# GitHub Actions
+- name: Check Security Drift
+  run: |
+    sca audit
+    sca diff --format json > drift.json
+
+    # Fail if critical/high findings increased
+    DELTA=$(jq '.delta.critical + .delta.high' drift.json)
+    if [ "$DELTA" -gt 0 ]; then
+      echo "Security degraded: +$DELTA critical/high findings"
+      exit 1
+    fi
+.RE
+.fi
+.SH LIMITATIONS
+.IP \(bu 2
+Diff compares only the two most recent audits (not full history)
+.IP \(bu 2
+Finding matching is based on file path and description (may have false positives)
+.IP \(bu 2
+Large diffs (> 1000 lines) may be truncated in detailed format
+.SH SEE ALSO
+.BR sca (1),
+.BR sca-audit (1),
+.BR git-diff (1)
+.SH BUGS
+Report bugs at https://github.com/your-org/sca/issues

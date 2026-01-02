@@ -1,0 +1,172 @@
+.TH SCA-SCOPE 1 "2026-01-02" "SCA 1.0" "Security Control Agent Manual"
+.SH NAME
+sca-scope \- Print file scope for security analysis
+.SH SYNOPSIS
+.B sca scope
+.RI [ OPTIONS ]
+.SH DESCRIPTION
+.B sca scope
+outputs the list of files that will be analyzed during a security audit.
+This is useful for:
+.IP \(bu 2
+Verifying exclusion patterns are working correctly
+.IP \(bu 2
+Understanding what code will be audited
+.IP \(bu 2
+Debugging scope issues before running expensive audits
+.IP \(bu 2
+Estimating audit size and duration
+.PP
+The scope is determined by:
+.IP 1. 3
+Git-tracked files (or all files if not a git repository)
+.IP 2. 3
+Default exclusions (node_modules/, dist/, .git/, etc.)
+.IP 3. 3
+Control directory exclusion (sec-ctrl/)
+.IP 4. 3
+Agent directory exclusion (tools/sec-audit-agent/ or /opt/sca)
+.IP 5. 3
+Custom exclusions from sec-ctrl/config/ignore.paths
+.SH OPTIONS
+.TP
+.BR \-\-repo " " \fIPATH\fR
+Repository path (default: current directory)
+.TP
+.BR \-\-ctrl-dir " " \fIPATH\fR
+Control directory path (default: sec-ctrl/)
+.TP
+.BR \-\-agent-dir " " \fIPATH\fR
+Agent installation directory (default: auto-detect)
+.SH OUTPUT
+.PP
+One file path per line, relative to repository root. Files are sorted by
+modification time (most recently modified first).
+.SH EXAMPLES
+.PP
+Print file scope for current directory:
+.PP
+.nf
+.RS
+$ sca scope
+src/main.py
+src/auth.py
+lib/crypto.go
+...
+.RE
+.fi
+.PP
+Count files in scope:
+.PP
+.nf
+.RS
+$ sca scope | wc -l
+247
+.RE
+.fi
+.PP
+Find all Python files in scope:
+.PP
+.nf
+.RS
+$ sca scope | grep '\\.py$'
+.RE
+.fi
+.PP
+Check if specific file is in scope:
+.PP
+.nf
+.RS
+$ sca scope | grep -q 'src/sensitive.py' && echo "In scope" || echo "Excluded"
+.RE
+.fi
+.PP
+Estimate scope size:
+.PP
+.nf
+.RS
+$ sca scope | xargs wc -l | tail -1
+  15234 total
+.RE
+.fi
+.SH DEFAULT EXCLUSIONS
+.PP
+The following patterns are always excluded:
+.IP \(bu 2
+Control directory (sec-ctrl/ or custom --ctrl-dir)
+.IP \(bu 2
+Agent directory (tools/sec-audit-agent/ or /opt/sca)
+.IP \(bu 2
+.git/ (Git metadata)
+.IP \(bu 2
+node_modules/ (Node.js dependencies)
+.IP \(bu 2
+vendor/ (Go, PHP dependencies)
+.IP \(bu 2
+.venv/, venv/ (Python virtual environments)
+.IP \(bu 2
+dist/, build/, target/ (Build artifacts)
+.IP \(bu 2
+__pycache__/ (Python bytecode)
+.SH CUSTOM EXCLUSIONS
+.PP
+Add additional exclusions to sec-ctrl/config/ignore.paths (one pattern per line):
+.PP
+.nf
+.RS
+# Exclude third-party code
+third_party/
+
+# Exclude generated code
+src/generated/
+
+# Exclude specific files
+config/secrets.yml.example
+.RE
+.fi
+.PP
+Comments (lines starting with #) and blank lines are ignored.
+.SH EXCLUSION PATTERNS
+.PP
+Patterns support basic globbing:
+.TP
+.B dir/
+Exclude entire directory (recursive)
+.TP
+.B *.ext
+Exclude all files with extension (anywhere in tree)
+.TP
+.B path/to/file.ext
+Exclude specific file (exact path match)
+.PP
+Patterns are matched as prefixes against file paths relative to repository root.
+.SH TROUBLESHOOTING
+.TP
+.B File should be excluded but appears in scope
+Check sec-ctrl/config/ignore.paths for typos. Ensure pattern matches the
+file path exactly as shown by `git ls-files`.
+.TP
+.B Control directory appears in scope
+This should never happen. If it does, file a bug report - this violates a hard
+constraint.
+.TP
+.B Git-ignored files appear in scope
+SCA uses `git ls-files` which only shows tracked files. Untracked files are
+automatically excluded. Run `git add` to track files before auditing.
+.SH PERFORMANCE
+.PP
+Scope generation is fast (< 1 second for most repositories). It uses `git ls-files`
+for efficiency in git repositories.
+.SH FILES
+.TP
+.I sec-ctrl/config/ignore.paths
+Custom exclusion patterns (one per line)
+.TP
+.I sec-ctrl/cache/last-scope.txt
+Cached file list from last run (internal use)
+.SH SEE ALSO
+.BR sca (1),
+.BR sca-audit (1),
+.BR git-ls-files (1)
+.SH BUGS
+Report bugs at https://github.com/your-org/sca/issues
