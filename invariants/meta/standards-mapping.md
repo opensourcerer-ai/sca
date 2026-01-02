@@ -46,6 +46,13 @@ Each finding MUST include at least one of the following:
 | SCA-008 | Environment variable without .env.example | Medium | Documentation | Active |
 | SCA-009 | Agent directory writable (immutability violation) | Critical | System Integrity | Active |
 | SCA-010 | Control directory included in analysis scope | Critical | System Integrity | Active |
+| SCA-801 | Missing TPM for cryptographic operations | Critical | TPM & Attestation | Active |
+| SCA-802 | Missing Secure Boot verification | Critical | TPM & Attestation | Active |
+| SCA-803 | Missing remote attestation | Critical | TPM & Attestation | Active |
+| SCA-804 | Insecure PCR usage | High | TPM & Attestation | Active |
+| SCA-805 | Missing Attestation Key provisioning | High | TPM & Attestation | Active |
+| SCA-806 | TPM 1.2 usage (deprecated) | Medium | TPM & Attestation | Active |
+| SCA-807 | Missing Confidential Computing attestation | Medium | TPM & Attestation | Active |
 
 ### Reserved Blocks
 
