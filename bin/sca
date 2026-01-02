@@ -1,21 +1,163 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/usr/bin/env python3
+"""
+SCA - Security Control Agent CLI
+Production-grade v1 unified entrypoint
+"""
 
-# Minimal v1 CLI wrapper.
-# For now, we route to the shell runner that invokes Claude Code.
+import argparse
+import os
+import subprocess
+import sys
+from pathlib import Path
 
-CMD="${1:-}"
-shift || true
 
-case "$CMD" in
-  audit)
-    "$(dirname "$0")/sec-audit.sh" "$@"
-    ;;
-  scope)
-    "$(dirname "$0")/repo-scope.sh" "$@"
-    ;;
-  *)
-    echo "Usage: sca <audit|scope> [flags]"
-    exit 1
-    ;;
-esac
+def get_script_dir():
+    """Get the directory containing this script."""
+    return Path(__file__).parent.resolve()
+
+
+def get_agent_dir():
+    """Resolve agent directory (where SCA is installed)."""
+    script_dir = get_script_dir()
+    # Assume script is in <agent>/bin/sca
+    return script_dir.parent
+
+
+def merge_env_and_args(args, env_var, arg_value):
+    """Merge environment variable with CLI argument (CLI wins)."""
+    if arg_value:
+        return arg_value
+    return os.environ.get(env_var, "")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog="sca",
+        description="Security Control Agent - Read-only, invariant-driven security auditing",
+        epilog="For more help: sca <command> --help",
+    )
+
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    # Common arguments for all commands
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--repo", default=".", help="Repository root (default: current dir)")
+    common.add_argument("--ctrl-dir", help="Control directory (default: <repo>/sec-ctrl or $SEC_CTRL_DIR)")
+    common.add_argument("--agent-dir", help="SCA agent location (default: auto-detect)")
+
+    # sca audit
+    audit_parser = subparsers.add_parser("audit", parents=[common], help="Run security audit")
+    audit_parser.add_argument("--readonly-agent", dest="readonly_agent", action="store_true", default=True,
+                              help="Enforce agent immutability (default: on)")
+    audit_parser.add_argument("--no-readonly-agent", dest="readonly_agent", action="store_false",
+                              help="Disable agent immutability check")
+    audit_parser.add_argument("--format", choices=["md", "json", "both"], default="both",
+                              help="Output format (default: both)")
+    audit_parser.add_argument("--profile", choices=["baseline", "web", "crypto", "llm", "all"], default="all",
+                              help="Invariant profile (default: all)")
+    audit_parser.add_argument("--enable-deps", action="store_true", help="Run dependency scanners")
+    audit_parser.add_argument("--incremental", action="store_true", help="Skip if repo unchanged")
+    audit_parser.add_argument("--verbose", action="store_true", help="Show detailed progress")
+
+    # sca scope
+    scope_parser = subparsers.add_parser("scope", parents=[common], help="Print file scope")
+    scope_parser.add_argument("--format", choices=["paths", "stats"], default="paths",
+                              help="Output mode (default: paths)")
+
+    # sca diff
+    diff_parser = subparsers.add_parser("diff", parents=[common], help="Compare reports (drift analysis)")
+    diff_parser.add_argument("--format", choices=["summary", "detailed"], default="summary",
+                              help="Output format (default: summary)")
+
+    # sca bootstrap
+    bootstrap_parser = subparsers.add_parser("bootstrap", parents=[common], help="Initialize sec-ctrl/ directory")
+    bootstrap_parser.add_argument("--force", action="store_true", help="Overwrite existing ctrl-dir")
+
+    # Parse args
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(0)
+
+    args = parser.parse_args()
+
+    if not args.command:
+        parser.print_help()
+        sys.exit(3)
+
+    # Resolve paths with env var fallback
+    agent_dir = merge_env_and_args(args, "SEC_AUDIT_AGENT_HOME", getattr(args, "agent_dir", None))
+    if not agent_dir:
+        agent_dir = str(get_agent_dir())
+
+    ctrl_dir = merge_env_and_args(args, "SEC_CTRL_DIR", getattr(args, "ctrl_dir", None))
+
+    # Build command
+    script_name_map = {
+        "audit": "sec-audit.sh",
+        "scope": "repo-scope.sh",
+        "diff": "sec-diff.sh",
+        "bootstrap": "sec-bootstrap.sh",
+    }
+
+    script_name = script_name_map.get(args.command)
+    if not script_name:
+        print(f"[ERROR] Unknown command: {args.command}", file=sys.stderr)
+        sys.exit(3)
+
+    script_path = get_script_dir() / script_name
+    if not script_path.exists():
+        print(f"[ERROR] Script not found: {script_path}", file=sys.stderr)
+        sys.exit(5)
+
+    # Build command arguments
+    cmd = [str(script_path)]
+    cmd.extend(["--repo", args.repo])
+
+    if ctrl_dir:
+        cmd.extend(["--ctrl-dir", ctrl_dir])
+
+    if agent_dir:
+        cmd.extend(["--agent-dir", agent_dir])
+
+    # Command-specific args
+    if args.command == "audit":
+        if args.readonly_agent:
+            cmd.append("--readonly-agent")
+        else:
+            cmd.append("--no-readonly-agent")
+
+        cmd.extend(["--format", args.format])
+
+        if args.enable_deps:
+            cmd.append("--enable-deps")
+
+        if args.incremental:
+            cmd.append("--incremental")
+
+        if args.verbose:
+            cmd.append("--verbose")
+
+    elif args.command == "scope":
+        cmd.extend(["--format", args.format])
+
+    elif args.command == "diff":
+        cmd.extend(["--format", args.format])
+
+    elif args.command == "bootstrap":
+        if args.force:
+            cmd.append("--force")
+
+    # Execute
+    try:
+        result = subprocess.run(cmd, check=False)
+        sys.exit(result.returncode)
+    except FileNotFoundError:
+        print(f"[ERROR] Failed to execute: {script_path}", file=sys.stderr)
+        sys.exit(5)
+    except KeyboardInterrupt:
+        print("\n[INFO] Interrupted by user", file=sys.stderr)
+        sys.exit(130)
+
+
+if __name__ == "__main__":
+    main()
