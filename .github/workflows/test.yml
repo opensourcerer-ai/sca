@@ -1,0 +1,92 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Run Test Suite
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq bc
+
+      - name: Make scripts executable
+        run: |
+          chmod +x bin/*.sh
+          chmod +x bin/sca
+          chmod +x tests/run_tests.sh
+          chmod +x tests/unit/*.sh
+          chmod +x tests/integration/*.sh
+
+      - name: Run unit tests
+        run: ./tests/run_tests.sh --unit-only
+
+      - name: Run integration tests
+        run: ./tests/run_tests.sh --integration-only
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: tests/fixtures/*/sec-ctrl/reports/
+          retention-days: 7
+
+  lint:
+    name: Lint Shell Scripts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install shellcheck
+        run: sudo apt-get install -y shellcheck
+
+      - name: Lint shell scripts
+        run: |
+          find bin/ tests/ -name "*.sh" -type f | while read -r script; do
+            echo "Checking: $script"
+            shellcheck "$script" || true
+          done
+
+  version-check:
+    name: Version Consistency
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Check VERSION file exists
+        run: |
+          if [ ! -f VERSION ]; then
+            echo "ERROR: VERSION file not found"
+            exit 1
+          fi
+
+      - name: Validate VERSION format
+        run: |
+          version=$(cat VERSION)
+          if ! echo "$version" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "ERROR: VERSION format invalid: $version"
+            echo "Expected: MAJOR.MINOR.PATCH (e.g., 0.8.8)"
+            exit 1
+          fi
+          echo "Version: $version"
