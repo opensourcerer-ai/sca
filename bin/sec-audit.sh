@@ -27,7 +27,25 @@ Options:
   --enable-deps              Run dependency scanners
   --incremental              Skip if repo unchanged
   --verbose                  Show detailed progress
+
+Filtering Options:
+  --exclude-standards LIST   Exclude standards (comma-separated: OWASP,NIST,PCI-DSS,CWE,SCA)
+  --include-standards LIST   Include only these standards (comma-separated)
+  --severity-min LEVEL       Minimum severity (CRITICAL, HIGH, MEDIUM, LOW)
+  --exclude-severity LIST    Exclude severities (comma-separated)
+  --interactive              Launch interactive suppression after audit
+
   -h, --help                 Show this help
+
+Examples:
+  # Exclude OWASP findings
+  sec-audit.sh --exclude-standards OWASP
+
+  # Only Critical and High findings
+  sec-audit.sh --severity-min HIGH
+
+  # Interactive mode
+  sec-audit.sh --interactive
 EOF
 }
 
@@ -41,6 +59,13 @@ ENABLE_DEPS=0
 INCREMENTAL=0
 VERBOSE=0
 
+# Filtering defaults
+EXCLUDE_STANDARDS=""
+INCLUDE_STANDARDS=""
+SEVERITY_MIN=""
+EXCLUDE_SEVERITY=""
+INTERACTIVE_MODE=0
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --repo) REPO="$2"; shift 2;;
@@ -52,6 +77,11 @@ while [[ $# -gt 0 ]]; do
     --enable-deps) ENABLE_DEPS=1; shift;;
     --incremental) INCREMENTAL=1; shift;;
     --verbose) VERBOSE=1; export SCA_LOG_LEVEL=2; shift;;
+    --exclude-standards) EXCLUDE_STANDARDS="$2"; shift 2;;
+    --include-standards) INCLUDE_STANDARDS="$2"; shift 2;;
+    --severity-min) SEVERITY_MIN="$2"; shift 2;;
+    --exclude-severity) EXCLUDE_SEVERITY="$2"; shift 2;;
+    --interactive) INTERACTIVE_MODE=1; shift;;
     -h|--help) usage; exit 0;;
     *) log_error "Unknown arg: $1"; usage; exit 3;;
   esac
@@ -184,6 +214,45 @@ CLAUDE_BIN="${CLAUDE_CODE_BIN:-claude}"
 
 # Build prompt
 PROMPT_FILE="$(mktemp)"
+
+# Build filtering instructions
+FILTER_INSTRUCTIONS=""
+if [[ -n "$EXCLUDE_STANDARDS" ]] || [[ -n "$INCLUDE_STANDARDS" ]] || [[ -n "$SEVERITY_MIN" ]] || [[ -n "$EXCLUDE_SEVERITY" ]]; then
+  FILTER_INSTRUCTIONS="## Filtering Criteria (APPLY STRICTLY)
+
+The user has requested the following filters be applied to the audit:
+"
+
+  if [[ -n "$EXCLUDE_STANDARDS" ]]; then
+    FILTER_INSTRUCTIONS+="
+- EXCLUDE findings tagged with these standards: $EXCLUDE_STANDARDS
+  Do NOT report any findings associated with these standards."
+  fi
+
+  if [[ -n "$INCLUDE_STANDARDS" ]]; then
+    FILTER_INSTRUCTIONS+="
+- INCLUDE ONLY findings tagged with these standards: $INCLUDE_STANDARDS
+  Report ONLY findings associated with these standards."
+  fi
+
+  if [[ -n "$SEVERITY_MIN" ]]; then
+    FILTER_INSTRUCTIONS+="
+- MINIMUM SEVERITY: $SEVERITY_MIN
+  Report only findings at this severity level or higher."
+  fi
+
+  if [[ -n "$EXCLUDE_SEVERITY" ]]; then
+    FILTER_INSTRUCTIONS+="
+- EXCLUDE severities: $EXCLUDE_SEVERITY
+  Do NOT report findings at these severity levels."
+  fi
+
+  FILTER_INSTRUCTIONS+="
+
+CRITICAL: Apply these filters BEFORE generating the final report. Filtered findings should not appear in the output at all.
+"
+fi
+
 cat > "$PROMPT_FILE" <<EOF
 You are a security audit agent. Follow the runbook and output strictly in the report template.
 
@@ -207,6 +276,8 @@ Languages detected: ${LANGS[*]:-none}
 
 ## File list (analyze these; do not analyze excluded paths)
 $(cat "$SCOPE_LIST")
+
+$FILTER_INSTRUCTIONS
 
 ## Override Rules (findings to suppress)
 The user has specified these findings should be SUPPRESSED and NOT reported:
@@ -270,5 +341,20 @@ PARSE_EXIT=$?
 log_info "Wrote: $OUT_MD"
 log_info "Latest: $OUT_LATEST_MD"
 log_info "Suggestions: $CTRL_DIR/SUGGESTIONS.md"
+
+# Launch interactive suppression if requested
+if [[ "$INTERACTIVE_MODE" -eq 1 ]]; then
+  # Only launch if there are Critical/High findings
+  if [[ $PARSE_EXIT -eq 2 ]]; then
+    log_info "Launching interactive suppression mode..."
+    "$SCRIPT_DIR/sca-suppress.sh" --ctrl-dir "$CTRL_DIR" --report "$OUT_LATEST_JSON"
+
+    # Re-run audit to apply suppressions
+    log_info "Re-running audit with new suppressions..."
+    exec "$0" "${@/--interactive/}"  # Re-run without interactive flag
+  else
+    log_info "No Critical/High findings to suppress"
+  fi
+fi
 
 exit $PARSE_EXIT

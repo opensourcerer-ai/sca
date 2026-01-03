@@ -59,6 +59,14 @@ def main():
     audit_parser.add_argument("--incremental", action="store_true", help="Skip if repo unchanged")
     audit_parser.add_argument("--verbose", action="store_true", help="Show detailed progress")
 
+    # Filtering options
+    audit_parser.add_argument("--exclude-standards", help="Exclude standards (comma-separated: OWASP,NIST,PCI-DSS,CWE,SCA)")
+    audit_parser.add_argument("--include-standards", help="Include only these standards (comma-separated)")
+    audit_parser.add_argument("--severity-min", choices=["CRITICAL", "HIGH", "MEDIUM", "LOW"],
+                              help="Minimum severity level")
+    audit_parser.add_argument("--exclude-severity", help="Exclude severities (comma-separated)")
+    audit_parser.add_argument("--interactive", action="store_true", help="Launch interactive suppression after audit")
+
     # sca scope
     scope_parser = subparsers.add_parser("scope", parents=[common], help="Print file scope")
     scope_parser.add_argument("--format", choices=["paths", "stats"], default="paths",
@@ -72,6 +80,13 @@ def main():
     # sca bootstrap
     bootstrap_parser = subparsers.add_parser("bootstrap", parents=[common], help="Initialize sec-ctrl/ directory")
     bootstrap_parser.add_argument("--force", action="store_true", help="Overwrite existing ctrl-dir")
+
+    # sca suppress
+    suppress_parser = subparsers.add_parser("suppress", parents=[common], help="Interactive finding suppression")
+    suppress_parser.add_argument("--report", help="Path to audit report JSON file (default: latest)")
+    suppress_parser.add_argument("--batch", help="Batch suppress from file (format: ID|Category|Reason)")
+    suppress_parser.add_argument("--auto-commit", action="store_true", help="Auto-commit changes to OVERRIDE.md")
+    suppress_parser.add_argument("--non-interactive", action="store_true", help="Batch mode only, no prompts")
 
     # Parse args
     if len(sys.argv) == 1:
@@ -97,6 +112,7 @@ def main():
         "scope": "repo-scope.sh",
         "diff": "sec-diff.sh",
         "bootstrap": "sec-bootstrap.sh",
+        "suppress": "sca-suppress.sh",
     }
 
     script_name = script_name_map.get(args.command)
@@ -137,6 +153,22 @@ def main():
         if args.verbose:
             cmd.append("--verbose")
 
+        # Filtering flags
+        if getattr(args, "exclude_standards", None):
+            cmd.extend(["--exclude-standards", args.exclude_standards])
+
+        if getattr(args, "include_standards", None):
+            cmd.extend(["--include-standards", args.include_standards])
+
+        if getattr(args, "severity_min", None):
+            cmd.extend(["--severity-min", args.severity_min])
+
+        if getattr(args, "exclude_severity", None):
+            cmd.extend(["--exclude-severity", args.exclude_severity])
+
+        if getattr(args, "interactive", False):
+            cmd.append("--interactive")
+
     elif args.command == "scope":
         cmd.extend(["--format", args.format])
 
@@ -146,6 +178,19 @@ def main():
     elif args.command == "bootstrap":
         if args.force:
             cmd.append("--force")
+
+    elif args.command == "suppress":
+        if getattr(args, "report", None):
+            cmd.extend(["--report", args.report])
+
+        if getattr(args, "batch", None):
+            cmd.extend(["--batch", args.batch])
+
+        if getattr(args, "auto_commit", False):
+            cmd.append("--auto-commit")
+
+        if getattr(args, "non_interactive", False):
+            cmd.append("--non-interactive")
 
     # Execute
     try:

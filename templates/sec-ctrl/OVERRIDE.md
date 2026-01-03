@@ -8,12 +8,28 @@ Use this file to:
 - Suppress **false positives** (with technical explanation)
 - Exclude **development/test artifacts** (clearly marked as non-production)
 
-## Format
-Each entry should include:
-1. **File path or pattern** to identify the finding
-2. **Reason** for override (security justification required)
-3. **Approver** and date
-4. **Review date** (when this override should be re-evaluated)
+## Format (Enhanced Metadata)
+Each override entry MUST include these fields:
+1. **Override**: One-line summary with category in parentheses
+2. **Category**: Justification category (see categories below)
+3. **Finding**: Finding ID and title from audit report
+4. **Reason**: Detailed explanation (business/technical justification)
+5. **Approved-By**: Name of person/team who approved the override
+6. **Date**: Date when override was created (YYYY-MM-DD)
+7. **Review-Date**: When this override should be re-evaluated (YYYY-MM-DD)
+8. **File path** or pattern (last line, no comment prefix)
+
+### Valid Justification Categories:
+1. **False Positive** - Finding is incorrect or doesn't apply
+2. **Accepted Risk** - Risk acknowledged and accepted by security team
+3. **Compensating Controls** - Mitigated by other security measures
+4. **Not Applicable** - Doesn't apply to this environment/deployment
+5. **Planned for Future** - Scheduled for fix in upcoming release
+6. **Third-Party Code** - Vendor-maintained code, cannot modify
+7. **Test/Development Only** - Only exists in non-production code
+8. **Performance Trade-off** - Security vs performance decision documented
+9. **Legacy Compatibility** - Required for backward compatibility
+10. **Custom Justification** - Other (provide detailed explanation)
 
 ---
 
@@ -21,34 +37,50 @@ Each entry should include:
 
 ### Example 1: Test Fixtures with Hardcoded Keys
 ```
-# Override: API key in test fixture (not used in production)
-# File: tests/fixtures/mock_api_key.json
-# Reason: Test-only mock credential, not a real API key
-# Approved: Security Team, 2024-01-15
-# Review: 2025-01-15
+# Override: API key in test fixture (Test/Development Only)
+# Category: Test/Development Only
+# Finding: CRIT-001 - Hardcoded API key in source
+# Reason: Test-only mock credential, not a real API key. Never deployed.
+# Approved-By: Security Team
+# Date: 2024-01-15
+# Review-Date: 2025-01-15
 tests/fixtures/mock_api_key.json
 ```
 
 ### Example 2: Development Configuration
 ```
-# Override: HTTP localhost connection in development config
-# File: config/development.yml
-# Reason: Local development only, not deployed to production
-# Approved: DevOps Team, 2024-01-20
-# Review: 2024-07-20
-config/development.yml - http://localhost
+# Override: HTTP localhost connection (Not Applicable)
+# Category: Not Applicable
+# Finding: HIGH-004 - Insecure HTTP connection
+# Reason: Development configuration only, not used in production deployments
+# Approved-By: DevOps Team
+# Date: 2024-01-20
+# Review-Date: 2025-01-20
+config/development.yml:15
 ```
 
 ### Example 3: Accepted Business Risk
 ```
-# Override: User emails logged for audit trail
-# File: src/auth/audit_logger.py:45
-# Reason: Required for compliance audit trail (SOC2 requirement)
-#         Logs are encrypted at rest and access-controlled
-# Approved: CISO, 2024-02-01
-# Review: 2024-08-01
-# Mitigation: Logs encrypted, 90-day retention, RBAC enforced
+# Override: User emails logged for audit trail (Accepted Risk)
+# Category: Accepted Risk
+# Finding: MED-002 - PII in application logs
+# Reason: Required for SOC2 compliance audit trail. Logs encrypted at rest, 90-day retention, RBAC enforced.
+# Approved-By: CISO
+# Date: 2024-02-01
+# Review-Date: 2024-08-01
 src/auth/audit_logger.py:45
+```
+
+### Example 4: False Positive
+```
+# Override: Base64 string mistaken for secret (False Positive)
+# Category: False Positive
+# Finding: HIGH-001 - Hardcoded credential detected
+# Reason: This is a base64-encoded public configuration value, not a secret. Source: public documentation.
+# Approved-By: Security Team
+# Date: 2024-03-10
+# Review-Date: 2025-03-10
+src/config/defaults.py:88
 ```
 
 ---
