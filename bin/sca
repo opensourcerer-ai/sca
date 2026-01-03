@@ -88,6 +88,18 @@ def main():
     suppress_parser.add_argument("--auto-commit", action="store_true", help="Auto-commit changes to OVERRIDE.md")
     suppress_parser.add_argument("--non-interactive", action="store_true", help="Batch mode only, no prompts")
 
+    # sca create-tickets
+    tickets_parser = subparsers.add_parser("create-tickets", parents=[common],
+                                           help="Create GitHub issues or Jira tickets from findings")
+    tickets_parser.add_argument("--report", help="Path to audit report JSON (default: latest)")
+    tickets_parser.add_argument("--platform", choices=["github", "jira"], default="github",
+                                help="Platform: github or jira (default: github)")
+    tickets_parser.add_argument("--env-file", default=".env", help="Environment file with credentials (default: .env)")
+    tickets_parser.add_argument("--severity-min", choices=["CRITICAL", "HIGH", "MEDIUM", "LOW"], default="HIGH",
+                                help="Minimum severity for ticket creation (default: HIGH)")
+    tickets_parser.add_argument("--dry-run", action="store_true", help="Preview without creating tickets")
+    tickets_parser.add_argument("--create-all", action="store_true", help="Create tickets even if they already exist")
+
     # Parse args
     if len(sys.argv) == 1:
         parser.print_help()
@@ -113,6 +125,7 @@ def main():
         "diff": "sec-diff.sh",
         "bootstrap": "sec-bootstrap.sh",
         "suppress": "sca-suppress.sh",
+        "create-tickets": "sca-create-tickets.sh",
     }
 
     script_name = script_name_map.get(args.command)
@@ -191,6 +204,24 @@ def main():
 
         if getattr(args, "non_interactive", False):
             cmd.append("--non-interactive")
+
+    elif args.command == "create-tickets":
+        if getattr(args, "report", None):
+            cmd.extend(["--report", args.report])
+
+        cmd.extend(["--platform", args.platform])
+
+        if getattr(args, "env_file", None):
+            cmd.extend(["--env-file", args.env_file])
+
+        if getattr(args, "severity_min", None):
+            cmd.extend(["--severity-min", args.severity_min])
+
+        if getattr(args, "dry_run", False):
+            cmd.append("--dry-run")
+
+        if getattr(args, "create_all", False):
+            cmd.append("--create-all")
 
     # Execute
     try:
