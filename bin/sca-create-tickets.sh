@@ -79,7 +79,7 @@ if [[ -f "$ENV_FILE" ]]; then
     source "$ENV_FILE"
     set +a
 else
-    log_warning "No .env file found at $ENV_FILE - using environment variables"
+    log_warn "No .env file found at $ENV_FILE - using environment variables"
 fi
 
 # Auto-detect control directory

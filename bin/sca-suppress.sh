@@ -124,7 +124,7 @@ if [[ -f "$JUSTIFICATIONS_FILE" ]]; then
         REVIEW_MONTHS[$id]="$months"
     done < "$JUSTIFICATIONS_FILE"
 else
-    log_warning "Justifications file not found: $JUSTIFICATIONS_FILE"
+    log_warn "Justifications file not found: $JUSTIFICATIONS_FILE"
     # Hardcode defaults
     JUSTIFICATIONS[1]="False Positive"
     JUSTIFICATION_NAMES[1]="False Positive"
@@ -303,7 +303,7 @@ batch_suppression() {
         local finding_json=$(jq ".findings.critical[]?, .findings.high[]?, .findings.medium[]? | select(.id == \"$id\")" "$REPORT_FILE")
 
         if [[ -z "$finding_json" ]]; then
-            log_warning "Finding $id not found in report, skipping"
+            log_warn "Finding $id not found in report, skipping"
             continue
         fi
 

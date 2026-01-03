@@ -183,7 +183,8 @@ def main():
             cmd.append("--interactive")
 
     elif args.command == "scope":
-        cmd.extend(["--format", args.format])
+        # repo-scope.sh doesn't accept --format yet
+        pass
 
     elif args.command == "diff":
         cmd.extend(["--format", args.format])

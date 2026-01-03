@@ -12,6 +12,7 @@ Usage: sec-bootstrap.sh [OPTIONS]
 Options:
   --repo <path>        Repository root
   --ctrl-dir <path>    Control directory to create
+  --agent-dir <path>   SCA agent location (default: auto-detect)
   --force              Overwrite existing ctrl-dir (危险)
   -h, --help           Show this help
 EOF
@@ -19,12 +20,14 @@ EOF
 
 REPO="."
 CTRL_DIR=""
+AGENT_DIR_ARG=""
 FORCE=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --repo) REPO="$2"; shift 2;;
     --ctrl-dir) CTRL_DIR="$2"; shift 2;;
+    --agent-dir) AGENT_DIR_ARG="$2"; shift 2;;
     --force) FORCE=1; shift;;
     -h|--help) usage; exit 0;;
     *) log_error "Unknown arg: $1"; usage; exit 3;;
@@ -33,7 +36,7 @@ done
 
 REPO_ROOT="$(resolve_repo_root "$REPO")"
 CTRL_DIR="$(resolve_ctrl_dir "$REPO_ROOT" "$CTRL_DIR")"
-AGENT_DIR="$(resolve_agent_dir "$REPO_ROOT" "")"
+AGENT_DIR="$(resolve_agent_dir "$REPO_ROOT" "$AGENT_DIR_ARG")"
 
 if [[ -z "$AGENT_DIR" ]]; then
   log_error "Could not resolve agent dir. Set SEC_AUDIT_AGENT_HOME or install to /opt/sca."
