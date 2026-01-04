@@ -1,16 +1,29 @@
 # SCA Installation Guide
 
 ## Prerequisites
+
+**Required:**
+- **Claude Code CLI** - [Installation guide](https://claude.com/claude-code)
 - Bash 4.0+
 - Git
-- Python 3.7+ (for CLI wrapper)
-- Claude Code CLI or equivalent model runner
+- Python 3.7+ (for wrapper scripts)
 
-Optional (for dependency scanning):
-- npm (for JavaScript projects)
-- pip-audit (for Python projects)
-- cargo-audit (for Rust projects)
-- govulncheck (for Go projects)
+**How SCA Works:**
+SCA is a collection of security invariants (markdown files) and wrapper scripts that Claude Code uses to perform AI-powered security audits. The execution flow is:
+
+```
+User/Cron → sca wrapper script → claude -p "audit using /opt/sca/invariants" → Analysis
+```
+
+Claude Code provides:
+- AI reasoning and analysis
+- Filesystem access to read your repository
+- API integration with Anthropic
+
+SCA provides:
+- 150+ security invariants (patterns to detect)
+- Prompts and workflows
+- Report generation templates
 
 ## Installation Methods
 
@@ -40,8 +53,13 @@ sudo ln -s /opt/sca/bin/sca /usr/local/bin/sca
 
 **5. Verify installation:**
 ```bash
+# Check SCA wrapper exists
 sca --help
-sca scope --repo /path/to/your/repo
+
+# Test Claude Code integration
+cd /path/to/test/repo
+claude-code
+> "Use the SCA invariants in /opt/sca/invariants to audit this repository"
 ```
 
 ---
@@ -102,31 +120,47 @@ tools/sec-audit-agent/bin/sca audit
 
 ## Post-Installation Setup
 
-### Initialize Control Directory
-In your target repository:
+### Running Your First Audit
+
+**Option 1: Interactive with Claude Code (Recommended for learning)**
 ```bash
 cd /path/to/your/repo
-sca bootstrap
+claude-code
+
+# In Claude Code session:
+> "Please run a security audit using the SCA invariants in /opt/sca/invariants/.
+   Create a sec-ctrl/ directory for reports and follow the workflow in /opt/sca/prompts/"
 ```
 
-This creates `sec-ctrl/` with default configuration.
+**Option 2: Automated with wrapper script**
+```bash
+# The sca wrapper calls claude with the right prompt
+cd /path/to/your/repo
+/opt/sca/bin/sca audit
 
-### Configure Ignore Patterns
-Edit `sec-ctrl/config/ignore.paths` to exclude paths from analysis:
+# Or if symlinked to PATH:
+sca audit
+```
+
+**What happens:**
+1. SCA wrapper script constructs prompt for Claude Code
+2. Claude Code reads repository files
+3. Applies security invariants from `/opt/sca/invariants/`
+4. Writes findings to `sec-ctrl/reports/`
+
+Results will be in `sec-ctrl/reports/security-audit.latest.md`.
+
+### Configure Ignore Patterns (Optional)
+After first run, edit `sec-ctrl/config/ignore.paths` to exclude paths:
 ```bash
 vim sec-ctrl/config/ignore.paths
 ```
 
-### Run First Audit
-```bash
-sca audit
-```
-
-Results will be in `sec-ctrl/reports/security-audit.latest.md`.
-
 ---
 
 ## CI/CD Integration
+
+**Important**: CI/CD environments need Claude Code CLI and Anthropic API key.
 
 ### GitHub Actions Example
 ```yaml
@@ -140,17 +174,23 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Install Claude Code
+        run: |
+          # Install Claude Code CLI
+          curl -L https://claude.com/download/cli/linux | tar xz
+          sudo mv claude /usr/local/bin/claude
+
       - name: Install SCA
         run: |
-          curl -L https://github.com/your-org/sca/releases/latest/download/sca.tar.gz | tar xz
-          sudo mv sca /opt/sca
+          git clone https://github.com/your-org/sca.git /tmp/sca
+          sudo mv /tmp/sca /opt/sca
           sudo chown -R root:root /opt/sca
           sudo chmod -R a-w /opt/sca
           sudo ln -s /opt/sca/bin/sca /usr/local/bin/sca
 
       - name: Run audit
         env:
-          CLAUDE_CODE_BIN: claude  # Configure your model runner
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           sca audit --verbose
 
@@ -162,21 +202,56 @@ jobs:
           path: sec-ctrl/reports/security-audit.latest.md
 
       - name: Fail on Critical/High findings
-        run: exit 0  # Exit code 2 will fail the job
+        run: |
+          # sca audit exits with code 2 if critical/high findings exist
+          # GitHub Actions will fail the job automatically
 ```
 
 ### Cron Example (Nightly Audits)
 ```bash
-# Run nightly audit and email results
-0 2 * * * /opt/sca/bin/sca audit --repo /srv/myapp && mail -s "Security Audit OK" team@example.com < /srv/myapp/sec-ctrl/reports/security-audit.latest.md
+# /etc/cron.d/sca-nightly-audit
+# Run nightly audit at 2 AM and email results
+
+0 2 * * * user ANTHROPIC_API_KEY=your-key /opt/sca/bin/sca audit --repo /srv/myapp && \
+  mail -s "Security Audit - No Issues" team@example.com < /srv/myapp/sec-ctrl/reports/security-audit.latest.md || \
+  mail -s "Security Audit - CRITICAL FINDINGS" team@example.com < /srv/myapp/sec-ctrl/reports/security-audit.latest.md
 ```
+
+**Cron Setup Notes:**
+- Set `ANTHROPIC_API_KEY` environment variable
+- Ensure `claude` CLI is in PATH or set `CLAUDE_CODE_BIN`
+- Test with `claude --version` before scheduling
 
 ---
 
 ## Troubleshooting
 
+### Claude Code not found
+**Error**: `claude: command not found`
+
+**Solution**: Install Claude Code CLI or set path:
+```bash
+# Check if installed
+which claude
+
+# Set custom path if needed
+export CLAUDE_CODE_BIN=/path/to/claude
+```
+
+### API Key Issues
+**Error**: `Anthropic API key not found`
+
+**Solution**: Set environment variable:
+```bash
+export ANTHROPIC_API_KEY=your-api-key-here
+
+# For cron jobs, add to crontab:
+ANTHROPIC_API_KEY=your-key
+0 2 * * * /opt/sca/bin/sca audit --repo /srv/myapp
+```
+
 ### "Agent dir is writable" (Exit 4)
-Ensure agent directory is read-only:
+Ensure SCA directory is read-only:
 ```bash
 sudo chmod -R a-w /opt/sca
 ```
@@ -184,14 +259,14 @@ sudo chmod -R a-w /opt/sca
 ### "Could not resolve agent dir" (Exit 3)
 Set environment variable:
 ```bash
-export SEC_AUDIT_AGENT_HOME=/path/to/sca
+export SEC_AUDIT_AGENT_HOME=/opt/sca
 ```
 
-### Model runner not found
-Set `CLAUDE_CODE_BIN`:
-```bash
-export CLAUDE_CODE_BIN=/path/to/claude
-```
+### Claude Code rate limiting
+If you hit API rate limits during audits:
+- Reduce repository size with `sec-ctrl/config/ignore.paths`
+- Run audits less frequently
+- Split large repos into smaller modules
 
 ---
 
