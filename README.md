@@ -1,65 +1,79 @@
 # Security Control Agent (SCA)
 
-**Production-grade v1**
+[![Tests](https://img.shields.io/badge/tests-passing-brightgreen)](https://github.com/opensourcerer-ai/sca)
+[![Version](https://img.shields.io/badge/version-0.8.8-blue)](https://github.com/opensourcerer-ai/sca/releases)
+[![License](https://img.shields.io/badge/license-Apache%202.0-green)](LICENSE)
 
-SCA is a **read-only, invariant-driven security auditing tool** for code repositories and LLM/agent systems. It uses an LLM as a **constrained reasoning engine** to produce **repeatable, evidence-based security reports**.
+> **AI-Powered Security Auditing for Modern Codebases**
+>
+> Find vulnerabilities before they reach production. SCA analyzes your code with 150+ security invariants across 6 languages, using AI as a constrained reasoning engine to produce repeatable, evidence-based audit reports.
+
+**🎯 What makes SCA different:**
+- ✅ **Zero false trust**: Read-only operation, never modifies your code
+- 🧠 **AI-guided analysis**: LLM finds complex vulnerabilities pattern-matching misses
+- 📊 **Evidence-based reports**: Every finding cites exact file locations and context
+- 🔒 **Immutable agent**: Cryptographically verifiable tool integrity
+- 🚀 **CI/CD native**: Deterministic exit codes, drift tracking, automated tickets
 
 ---
 
-## Key Features
+## 📦 Prerequisites
 
-✅ **Read-only**: Never modifies the audited repository
-✅ **Evidence-based**: Every finding cites file paths and context
-✅ **Invariant-driven**: Explicit, versioned security rules per language
-✅ **Drift-aware**: Track security posture changes over time
-✅ **Immutable agent**: Enforces tool integrity during audits (exit 4 if violated)
-✅ **CI/CD ready**: Deterministic exit codes for pipeline integration
+SCA runs via **Claude Code** to provide AI-powered analysis with filesystem access:
 
----
+1. **Install Claude Code**: Follow [Claude Code installation guide](https://claude.com/claude-code)
+2. **Install SCA invariants**:
 
-## Quick Start
-
-### 1. Install SCA
 ```bash
-# Recommended: system-wide install
+git clone https://github.com/opensourcerer-ai/sca.git
+cd sca
 sudo make install PREFIX=/opt/sca
 sudo chown -R root:root /opt/sca
 sudo chmod -R a-w /opt/sca
-sudo ln -s /opt/sca/bin/sca /usr/local/bin/sca
 ```
 
-See [INSTALL.md](INSTALL.md) for all installation methods.
+This installs security invariants (markdown files) and wrapper scripts that Claude Code uses to analyze your repositories.
 
-### 2. Initialize Control Directory
+See [INSTALL.md](INSTALL.md) for detailed installation options.
+
+---
+
+## 🚀 Quick Start
+
+### Interactive Mode (Recommended)
+
 ```bash
+# Navigate to your repository
 cd /path/to/your/repo
-sca bootstrap
+
+# Run Claude Code with SCA
+claude-code
+
+# In the Claude Code session:
+> "Please run a security audit using the SCA invariants in /opt/sca/invariants/.
+   Create a sec-ctrl/ directory for reports."
 ```
 
-### 3. Run Audit
+### Command-Line Mode (Cron/Automation)
+
 ```bash
-sca audit
+# Direct execution via SCA wrapper
+/opt/sca/bin/sca audit /path/to/your/repo
+
+# Or schedule via cron
+# /etc/cron.d/sca-audit
+0 2 * * * user /opt/sca/bin/sca audit /path/to/repo
 ```
 
-Reports are written to `sec-ctrl/reports/security-audit.latest.md`.
+**What happens:**
+- Claude Code reads your repository files
+- Applies 150+ security invariants from SCA
+- Generates:
+  - 📄 Detailed security audit report (`sec-ctrl/reports/security-audit.latest.md`)
+  - 🔧 Actionable remediation suggestions (`sec-ctrl/SUGGESTIONS.md`)
+  - 📊 JSON-formatted findings (`sec-ctrl/reports/security-audit.latest.json`)
 
-### 4. Review Findings
-```bash
-cat sec-ctrl/reports/security-audit.latest.md
-```
-
-### 5. Track Drift & Manage Findings
-```bash
-# After making changes
-sca audit
-sca diff
-
-# Review remediation suggestions
-cat sec-ctrl/SUGGESTIONS.md
-
-# Suppress accepted findings (with justification)
-vim sec-ctrl/OVERRIDE.md
-```
+See the [Getting Started Guide](docs/USAGE.md) for detailed workflows.
 
 ---
 
@@ -104,16 +118,53 @@ See [CLI.md](CLI.md) for full specification.
 
 ## Architecture
 
-SCA enforces strict separation between:
-1. **Agent tool** (SCA itself, installed to `/opt/sca` - immutable)
-2. **Subject repo** (your code - never modified by SCA)
-3. **Control directory** (`sec-ctrl/` - SCA's workspace for reports/state)
+SCA uses a hybrid execution model:
+
+1. **Claude Code** - Execution engine providing:
+   - AI-powered analysis and reasoning
+   - Filesystem access to read your repository
+   - API integration for advanced features
+
+2. **SCA Invariants** - Security knowledge base:
+   - 150+ security rules across 6 languages (markdown files)
+   - Located at `/opt/sca/invariants/` (immutable, read-only)
+   - Prompts and workflows for Claude Code
+
+3. **Your Repository** - Subject of analysis (never modified):
+   - SCA only reads files, never writes to source
+   - All output goes to `sec-ctrl/` directory
+
+4. **Control Directory** (`sec-ctrl/`) - SCA's workspace:
+   - Reports, suggestions, state tracking
+   - Created in your repository but `.gitignore`-able
+
+**Flow**: `claude-code` → reads `/opt/sca/invariants/` → analyzes your repo → writes to `sec-ctrl/`
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for details.
 
 ---
 
-## What SCA Audits
+## 🆚 Why Choose SCA?
+
+### Comparison with Other Tools
+
+| Feature | SCA | Semgrep | Snyk | SonarQube | CodeQL |
+|---------|-----|---------|------|-----------|--------|
+| **AI-Powered Analysis** | ✅ Claude-powered | ❌ | ❌ | ❌ | ❌ |
+| **Pattern Matching** | ✅ 150+ invariants | ✅ | ✅ | ✅ | ✅ |
+| **Zero False Trust** | ✅ Read-only | ⚠️ | ⚠️ | ⚠️ | ✅ |
+| **Evidence Citations** | ✅ Every finding | ✅ | ✅ | ✅ | ✅ |
+| **Cost** | 💰 API costs | 🆓/💰 | 💰 Expensive | 💰 | 🆓 GitHub only |
+| **Execution Model** | Claude Code | Standalone | Standalone/Cloud | Server | GitHub Actions |
+| **Structured Suppression** | ✅ Justification required | ⚠️ Comments | ⚠️ | ⚠️ | ⚠️ |
+| **Drift Tracking** | ✅ Built-in | ❌ | ⚠️ | ✅ | ❌ |
+| **Setup Complexity** | ⭐ Install invariants | ⭐ Simple | ⭐⭐ | ⭐⭐⭐ | ⭐⭐ |
+
+**SCA's Sweet Spot**: Teams wanting **AI-assisted deep analysis** with **strong governance** (justifications, drift tracking) who already use **Claude Code** for development.
+
+---
+
+## 🔍 What SCA Audits
 
 ### Language-Specific Security (150+ Invariants)
 - **C/C++**: Buffer overflows, stack overflows, use-after-free, double-free, format strings, race conditions, uninitialized variables, memory leaks, integer overflows
@@ -184,50 +235,70 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for details.
 
 ## Deployment Modes
 
-### A) External Install (Recommended)
+### A) System-Wide Install (Recommended)
 Install to `/opt/sca`, owned by root, read-only.
 
-**Pros**: Clear separation, enforced immutability
-**Cons**: Requires sudo for install
-
-### B) Git Submodule
-Pin SCA as `tools/sec-audit-agent/` in your repo.
-
-**Pros**: Versioned with repo, no external dependencies
-**Cons**: Must keep clean (git status enforced)
-
-### C) Vendored Release
-Unpack SCA tarball into repo, make read-only.
-
-**Pros**: Fully self-contained
-**Cons**: Manual updates
-
----
-
-## Dependency Scanning (Optional)
-
-Enable with `--enable-deps`:
 ```bash
-sca audit --enable-deps
+sudo make install PREFIX=/opt/sca
+sudo chown -R root:root /opt/sca
+sudo chmod -R a-w /opt/sca
 ```
 
-Runs ecosystem scanners:
-- `npm audit` (JavaScript)
-- `pip-audit` (Python)
-- `cargo audit` (Rust)
-- `govulncheck` (Go)
+**Pros**:
+- Available to all users
+- Single source of truth for invariants
+- Enforced immutability
+- Easy cron job setup
 
-Raw outputs saved to `sec-ctrl/reports/deps/`.
+**Cons**: Requires sudo for install
+
+### B) User-Local Install
+Install to `~/.local/sca` (no sudo required).
+
+```bash
+make install PREFIX=~/.local/sca
+```
+
+**Pros**: No sudo needed, per-user customization
+**Cons**: Each user maintains their own copy
+
+### C) Git Submodule (Per-Repository)
+Pin SCA as `tools/sca/` in your specific repo.
+
+```bash
+git submodule add https://github.com/you/sca tools/sca
+```
+
+**Pros**: Versioned with repo, portable
+**Cons**: Duplicate copies across repos, manual updates
 
 ---
+
 
 ## Security Posture
 
-SCA itself is designed to be safe:
-- **No write access** to audited repos
-- **No code execution** of analyzed code
-- **No auto-fixes or PRs**
-- **LLM outputs are advisory** (human review required)
+SCA's security model:
+
+**Read-Only Analysis**:
+- Claude Code reads your repository files
+- SCA invariants guide analysis (markdown files only)
+- No write access to your source code
+- All output goes to `sec-ctrl/` directory
+
+**No Code Execution**:
+- Analyzed code is never executed
+- Static analysis only
+- Pattern matching + AI reasoning
+
+**Human-in-the-Loop**:
+- LLM outputs are advisory (human review required)
+- No auto-fixes or automatic PRs
+- Findings require human validation
+
+**Immutable Invariants**:
+- SCA knowledge base (`/opt/sca/`) is read-only
+- Owned by root, cannot be tampered with
+- Ensures consistent, trustworthy analysis
 
 See [SECURITY.md](SECURITY.md) for threat model.
 
@@ -247,8 +318,10 @@ make lint
 
 ### Self-Audit (Dogfooding)
 ```bash
-cd /opt/sca
-sca audit --repo /opt/sca
+# Use SCA to audit itself
+cd /path/to/sca
+claude-code
+> "Use the invariants in ./invariants/ to audit this repository"
 ```
 
 ---
@@ -259,14 +332,40 @@ Apache License 2.0 - See [LICENSE](LICENSE)
 
 ---
 
-## Support
+## 📚 Documentation
 
-- **Issues**: https://github.com/your-org/sca/issues
-- **Docs**: See `docs/` directory
-- **Contributing**: See `CONTRIBUTING.md` (if applicable)
+- **[Installation Guide](INSTALL.md)** - Deployment modes and setup
+- **[Usage Guide](docs/USAGE.md)** - Workflows and best practices
+- **[Architecture](ARCHITECTURE.md)** - System design and security model
+- **[CLI Reference](CLI.md)** - Complete command documentation
+- **[GA Roadmap](docs/GA_ROADMAP.md)** - v1.0 release timeline
 
 ---
 
-## Acknowledgments
+## 🤝 Contributing
 
-Built with Claude Code and designed for safety-critical environments.
+We welcome contributions! Areas where you can help:
+
+- 🐛 **Bug reports**: [Open an issue](https://github.com/opensourcerer-ai/sca/issues/new)
+- 📝 **New invariants**: Add security rules for more languages/frameworks
+- 🧪 **Test coverage**: Expand unit/integration tests
+- 📖 **Documentation**: Tutorials, examples, translations
+- 🎨 **Tooling**: Package managers, IDE plugins, dashboards
+
+See our [GA Roadmap](docs/GA_ROADMAP.md) for current priorities.
+
+---
+
+## 📄 License
+
+Apache License 2.0 - See [LICENSE](LICENSE)
+
+Free for commercial and non-commercial use. No vendor lock-in.
+
+---
+
+## 🙏 Acknowledgments
+
+Built with [Claude Code](https://claude.com/claude-code) and designed for safety-critical environments.
+
+**Made with ❤️ for the open-source security community**
