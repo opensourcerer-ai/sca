@@ -81,6 +81,10 @@ def main():
     bootstrap_parser = subparsers.add_parser("bootstrap", parents=[common], help="Initialize sec-ctrl/ directory")
     bootstrap_parser.add_argument("--force", action="store_true", help="Overwrite existing ctrl-dir")
 
+    # sca diagnose
+    diagnose_parser = subparsers.add_parser("diagnose", parents=[common], help="Diagnose SCA installation")
+    diagnose_parser.add_argument("--verbose", action="store_true", help="Show detailed output")
+
     # sca suppress
     suppress_parser = subparsers.add_parser("suppress", parents=[common], help="Interactive finding suppression")
     suppress_parser.add_argument("--report", help="Path to audit report JSON file (default: latest)")
@@ -124,6 +128,7 @@ def main():
         "scope": "repo-scope.sh",
         "diff": "sec-diff.sh",
         "bootstrap": "sec-bootstrap.sh",
+        "diagnose": "sca-diagnose.sh",
         "suppress": "sca-suppress.sh",
         "create-tickets": "sca-create-tickets.sh",
     }
@@ -192,6 +197,10 @@ def main():
     elif args.command == "bootstrap":
         if args.force:
             cmd.append("--force")
+
+    elif args.command == "diagnose":
+        if getattr(args, "verbose", False):
+            cmd.append("--verbose")
 
     elif args.command == "suppress":
         if getattr(args, "report", None):
