@@ -1,6 +1,6 @@
 # SCA General Availability (GA) Roadmap
 
-## Current State: MVP v0.8.8
+## Current State: MVP v0.8.9
 
 ✅ **Completed**:
 - Core security auditing with AI analysis
@@ -10,7 +10,9 @@
 - GitHub/Jira ticket creation
 - Comprehensive documentation
 - Testing infrastructure (unit + integration tests) ✅ v0.8.8
-- Claude Code integration (wrapper scripts)
+- Claude Code integration (wrapper scripts) ✅ v0.8.8
+- Diagnostic tooling (sca diagnose) ✅ v0.8.9
+- Claude Code integration guide ✅ v0.8.9
 
 **⚠️ Critical Architecture Note**:
 SCA requires **Claude Code CLI** to function. It is not a standalone tool.
@@ -107,140 +109,108 @@ test-coverage:
 
 ---
 
-### 📦 2. Installation & Distribution (RECONSIDERED)
+### 📦 2. Installation & Distribution
 
-**Status**: ⚠️ Manual install works; advanced packaging **not applicable**
+**Status**: ✅ Manual install works; GitHub releases needed for GA
 
-**Reality Check**:
-SCA requires **Claude Code CLI** to function. It's not a standalone tool. The execution model is:
-```
-bin/sca → sec-audit.sh → claude code < prompt → analysis
-```
+**Architecture Reality**:
+SCA is a collection of markdown files (invariants) and shell scripts (orchestration) that requires **Claude Code CLI** to function. Traditional packaging (Docker, Homebrew, APT) doesn't apply here.
 
-This changes the packaging strategy entirely:
+**What Works and Makes Sense**:
 
-#### What Makes Sense:
-
-1. **Git Clone + Make Install** ✅ (Current, works well)
+#### 1. Git Clone + Make Install ✅ (Current - Works Well)
 ```bash
-git clone https://github.com/your-org/sca.git
+git clone https://github.com/opensourcerer-ai/sca.git
 cd sca
 sudo make install PREFIX=/opt/sca
+sudo chown -R root:root /opt/sca
+sudo chmod -R a-w /opt/sca
 ```
 
-2. **GitHub Releases with Tarball**
+**Status**: Fully functional, documented in INSTALL.md
+
+#### 2. GitHub Releases with Tarball (Needed for GA)
 ```bash
-# Download release
-curl -L https://github.com/your-org/sca/releases/latest/download/sca.tar.gz | tar xz
-sudo mv sca /opt/sca
+# Download versioned release
+curl -L https://github.com/opensourcerer-ai/sca/releases/download/v1.0.0/sca-1.0.0.tar.gz | tar xz
+sudo mv sca-1.0.0 /opt/sca
 sudo ln -s /opt/sca/bin/sca /usr/local/bin/sca
 ```
 
-3. **Installation Script** (for convenience)
+**Status**: ❌ Not implemented yet
+**Priority**: P0 for GA (users expect releases)
+**Effort**: 1 day (create release workflow)
+
+#### 3. Installation Script (Nice to Have)
 ```bash
 # One-liner install
-curl -fsSL https://sca.example.com/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/opensourcerer-ai/sca/master/install.sh | bash
 ```
 
-#### What Does NOT Make Sense:
+**Status**: ❌ Not implemented yet
+**Priority**: P1 (convenience)
+**Effort**: 1 day
 
-- ❌ **Homebrew** - Users still need Claude Code CLI installed separately
-- ❌ **APT/YUM packages** - Overkill for markdown files + shell scripts
-- ❌ **Docker** - Claude Code needs host filesystem access, containers add complexity
-- ❌ **Standalone binaries** - Not applicable (depends on Claude Code)
+**What We've Completed**:
 
-#### What We Should Focus On Instead:
+✅ **Claude Code Integration Documentation** (docs/CLAUDE_CODE_GUIDE.md)
+   - Installation instructions for Claude Code CLI
+   - Authentication and API key setup
+   - Usage patterns (interactive, cron, CI/CD)
+   - Troubleshooting guide
 
-1. **Claude Code Integration Documentation**
-   - How to install Claude Code CLI
-   - How to configure ANTHROPIC_API_KEY
-   - Example prompts for interactive use
-   - Cron job examples
+✅ **Installation Verification** (`sca diagnose`)
+   - Checks Claude Code CLI installed
+   - Validates dependencies (Python, Bash, jq, git)
+   - Verifies agent directory immutability
+   - Reports configuration issues
 
-2. **Installation Verification**
-   ```bash
-   sca diagnose
-   # Checks: Claude Code installed, API key set, agent readable, etc.
-   ```
+**Remaining for GA**:
+- [ ] GitHub release automation workflow
+- [ ] Versioned tarball creation
+- [ ] Installation script (install.sh)
+- [ ] Signature verification (GPG signing releases)
 
-3. **Quick Start Examples**
-   - Vulnerable sample repositories
-   - Expected findings
-   - Step-by-step walkthroughs
-
-**Revised Priority**: P1 (Nice to have, but manual install is acceptable)
-**Effort**: 1 week for polished install script + diagnose command
+**Priority**: P0 (Release automation is critical for GA)
+**Effort**: 2-3 days
 
 ---
 
-### 🔐 3. Security Hardening (CRITICAL)
+### 🔐 3. Security Hardening
 
-**Status**: ⚠️ Needs improvement
+**Status**: ✅ Core hardening done; agent signing needed
 
-**Required**:
+**Claude Code handles ANTHROPIC_API_KEY** - No custom credential management needed for that.
 
-#### Credential Management
+**What's Already Secure**:
+
+✅ **Agent Immutability** (v0.8.8)
+   - Read-only /opt/sca directory enforced
+   - Exit code 4 if agent is writable
+   - Verified by `sca diagnose`
+
+✅ **No Code Execution** (by design)
+   - Static analysis only
+   - Analyzed code never executed
+   - Human-in-the-loop for all actions
+
+✅ **Credential Security Documentation** (v0.8.9)
+   - Claude Code Integration Guide covers API key best practices
+   - Environment variable recommendations
+   - CI/CD secrets management examples (GitHub Secrets, AWS Secrets Manager)
+
+**Remaining for GA**:
+
+#### 1. Agent Signature Verification
 ```bash
-# Current: .env files (risky)
-# GA Required: Multiple secure options
-
-1. Environment variables (current)
-2. System keychain integration (macOS/Linux)
-3. AWS Secrets Manager
-4. HashiCorp Vault
-5. Azure Key Vault
-6. GCP Secret Manager
-```
-
-**Implementation**:
-```bash
-# bin/sca-secrets.sh
-#!/bin/bash
-# Secure credential retrieval
-
-get_secret() {
-    local key="$1"
-
-    # Try environment variable first
-    if [[ -n "${!key}" ]]; then
-        echo "${!key}"
-        return
-    fi
-
-    # Try system keychain
-    if command -v security &>/dev/null; then
-        security find-generic-password -s "sca-$key" -w 2>/dev/null && return
-    fi
-
-    # Try AWS Secrets Manager
-    if command -v aws &>/dev/null; then
-        aws secretsmanager get-secret-value --secret-id "sca/$key" \
-            --query SecretString --output text 2>/dev/null && return
-    fi
-
-    # Fall back to .env
-    grep "^$key=" .env | cut -d= -f2
-}
-
-# Usage:
-GITHUB_TOKEN=$(get_secret "GITHUB_TOKEN")
-```
-
-#### Agent Verification
-```bash
-# Current: Basic writable check
-# GA Required: Cryptographic verification
-
-# Add signature verification
+# Verify agent integrity with GPG signatures
 bin/verify-agent.sh:
 #!/bin/bash
-# Verify agent integrity with GPG signature
-
 verify_agent_signature() {
     local agent_dir="$1"
 
-    # Download public key
-    curl -s https://sca.example.com/pubkey.asc | gpg --import
+    # Import SCA public key
+    curl -s https://github.com/opensourcerer-ai/sca/releases/download/v1.0.0/sca-pubkey.asc | gpg --import
 
     # Verify signature
     if ! gpg --verify "$agent_dir/SHA256SUMS.sig" "$agent_dir/SHA256SUMS"; then
@@ -253,17 +223,25 @@ verify_agent_signature() {
 }
 ```
 
-#### Audit Logging
+**Status**: ❌ Not implemented
+**Priority**: P1 (nice to have for GA, critical for v1.1)
+**Effort**: 1 day
+
+#### 2. Secure Credential Storage for GitHub/Jira (Optional)
+For users who want ticket creation, document secure storage:
 ```bash
-# Log all security-sensitive operations
-sec-ctrl/state/audit-log.jsonl:
-{"timestamp":"2026-01-03T12:00:00Z","action":"audit_started","user":"alice"}
-{"timestamp":"2026-01-03T12:05:00Z","action":"finding_suppressed","finding_id":"CRIT-001","user":"alice"}
-{"timestamp":"2026-01-03T12:10:00Z","action":"ticket_created","finding_id":"HIGH-001","platform":"github"}
+# Already documented in Claude Code Integration Guide:
+- Environment variables (current)
+- GitHub Secrets (for CI/CD)
+- AWS Secrets Manager example provided
+- Azure/GCP secrets managers mentioned
 ```
 
-**Effort**: 1-2 weeks
-**Priority**: P0 (Security critical)
+**Status**: ✅ Documented in docs/CLAUDE_CODE_GUIDE.md
+**No implementation needed** - users can choose their own solution
+
+**Priority**: P1 (Most security hardening already done)
+**Effort**: 1 day for agent signing
 
 ---
 
@@ -440,14 +418,11 @@ jobs:
           release_name: Release ${{ github.ref }}
           body_path: RELEASE_NOTES.md
 
-      - name: Upload Assets
-        # Upload binaries
+      - name: Upload Tarball Assets
+        # Upload sca-vX.Y.Z.tar.gz files
 
-      - name: Update Homebrew Formula
-        # Auto-update brew formula
-
-      - name: Publish Docker Image
-        # Push to Docker Hub
+      - name: Sign Release with GPG
+        # Create SHA256SUMS and sign with GPG
 ```
 
 #### Changelog
@@ -480,76 +455,56 @@ jobs:
 
 ---
 
-### 🐛 7. Error Handling & Diagnostics (MEDIUM)
+### 🐛 7. Error Handling & Diagnostics
 
-**Status**: ⚠️ Basic error handling
+**Status**: ✅ Diagnostic mode complete; debug logging remaining
 
-**Required**:
+**Completed**:
 
-#### Better Error Messages
+✅ **Diagnostic Command** (v0.8.9)
 ```bash
-# Current:
-[ERROR] jq is required for parsing JSON reports
+$ sca diagnose
 
-# GA Required:
-[ERROR] Missing dependency: jq
-[HELP]  jq is required for parsing JSON audit reports
-[HELP]  Install:
-[HELP]    - macOS:        brew install jq
-[HELP]    - Ubuntu/Debian: sudo apt-get install jq
-[HELP]    - Fedora/RHEL:  sudo dnf install jq
-[HELP]  More info: https://stedolan.github.io/jq/
-```
-
-#### Diagnostic Mode
-```bash
-# sca diagnose
-sca diagnose --verbose
-
-Output:
 SCA Diagnostics
 ===============
-✓ Python 3.11.5 (required: 3.8+)
+
+Core Dependencies:
+------------------
+✓ Python 3.11.5 (required: 3.7+)
 ✓ Bash 5.2.15 (required: 4.0+)
-✓ jq 1.6 (required: 1.5+)
-✓ git 2.39.0
-✗ Claude Code CLI not found
-  Install from: https://claude.com/claude-code
-✓ Agent directory: /opt/sca (read-only: yes, dirty: no)
-✓ Control directory: ./sec-ctrl (writable: yes)
+✓ jq installed: jq-1.6
+✓ git installed: git version 2.39.0
+
+Claude Code Integration:
+------------------------
+✓ Claude Code CLI installed: claude 1.2.3
+✓ Agent directory: /opt/sca (read-only)
+✓ All required files present
 
 GitHub Integration:
 ✓ gh CLI installed (v2.40.0)
 ✓ Authenticated as: alice
-✓ Repository: mycompany/myapp
 
-Jira Integration:
-✗ JIRA_URL not set
-✗ JIRA_API_TOKEN not set
-  Configure in .env file
-
-Overall Status: ⚠️ Some issues detected
+Summary: ✓ All checks passed! SCA is ready to use.
 ```
 
-#### Debug Logging
+**Remaining for GA**:
+
+#### Better Error Messages (P1)
+Add helpful error messages with installation instructions for missing dependencies.
+
+#### Debug Logging (P2 - Nice to have)
 ```bash
 # SCA_DEBUG=1 sca audit
 export SCA_DEBUG=1
 sca audit --verbose
 
-# Writes detailed log
-sec-ctrl/state/debug.log:
-[2026-01-03 12:00:00] [DEBUG] Resolving agent dir
-[2026-01-03 12:00:00] [DEBUG] Found agent: /opt/sca
-[2026-01-03 12:00:00] [DEBUG] Checking agent immutability
-[2026-01-03 12:00:00] [DEBUG] Agent is read-only: true
-[2026-01-03 12:00:01] [DEBUG] Generating scope
-[2026-01-03 12:00:01] [DEBUG] Loaded 15 exclusion patterns
-[2026-01-03 12:00:02] [DEBUG] Scope: 620 files
+# Would write detailed log to:
+sec-ctrl/state/debug.log
 ```
 
-**Effort**: 1 week
-**Priority**: P2 (Quality of life)
+**Priority**: P2 (Diagnostic mode done, debug logging is nice-to-have)
+**Effort**: 2-3 days for enhanced error messages
 
 ---
 
@@ -685,67 +640,68 @@ Features:
 
 ## Recommended GA Timeline
 
-### Phase 1: Testing & Packaging (3 weeks)
-**Week 1-2**: Unit and integration tests
-**Week 3**: Package for Homebrew, APT, Docker
+### ✅ Phase 1: Testing & Documentation (COMPLETED - v0.8.9)
+**Week 1-2**: Unit and integration tests ✅
+**Week 3**: Claude Code integration guide, diagnostics ✅
 
-### Phase 2: Security & Performance (2 weeks)
-**Week 4**: Secure credential management
-**Week 5**: Performance optimization and benchmarks
+### Phase 2: Performance & Examples (2 weeks) ⬅️ **CURRENT**
+**Week 4**: Performance benchmarks (100K files)
+**Week 5**: Example vulnerable repositories
 
-### Phase 3: Documentation & Polish (2 weeks)
-**Week 6**: Tutorials, examples, videos
-**Week 7**: Error handling, diagnostics, changelog
+### Phase 3: Release Infrastructure (1 week)
+**Week 6**: GitHub release automation, semantic versioning, changelog
 
-### Phase 4: Release Preparation (1 week)
-**Week 8**:
+### Phase 4: Polish & Release (1 week)
+**Week 7**:
+- Tutorial documentation
+- Better error messages
 - Final testing
-- Release notes
-- Marketing materials
 - GA announcement
 
-**Total**: ~8 weeks to GA
+**Total**: ~7 weeks to GA (~3 weeks remaining)
 
 ---
 
-## Minimum Viable GA (Fast Track)
+## Current Progress
 
-If timeline is critical, focus on **absolute essentials**:
+✅ **Completed (Weeks 1-3)**:
+- [x] Unit tests (90% coverage) - v0.8.8
+- [x] Integration tests (end-to-end) - v0.8.8
+- [x] Claude Code integration guide - v0.8.9
+- [x] Diagnostic command - v0.8.9
+- [x] Documentation updates - v0.8.8-v0.8.9
 
-### 2-Week Fast Track to GA
-**Week 1**:
-- [ ] Basic unit tests (core functionality)
-- [ ] Homebrew formula
-- [ ] Docker official image
-- [ ] Performance test (up to 10K files)
+🚧 **In Progress (Weeks 4-5)**:
+- [ ] Performance benchmarks
+- [ ] Example vulnerable repositories
 
-**Week 2**:
-- [ ] Getting started tutorial
-- [ ] Example vulnerable repo
-- [ ] Semantic versioning
+⏳ **Remaining (Weeks 6-7)**:
 - [ ] GitHub release automation
-- [ ] sca diagnose command
-
-**Result**: Functional GA with known limitations, iterate post-launch
+- [ ] Tutorial documentation
+- [ ] Better error messages
 
 ---
 
 ## Risk Assessment
 
-### High Risk (Must Address)
-1. **No automated testing** → Production bugs likely
-2. **Manual installation only** → Adoption barrier
-3. **No performance validation** → May fail on large repos
+### ✅ Resolved (v0.8.8-v0.8.9)
+1. ~~No automated testing~~ → ✅ 100% test suite passing
+2. ~~Manual installation unclear~~ → ✅ Documented in INSTALL.md and CLAUDE_CODE_GUIDE.md
+3. ~~No diagnostics~~ → ✅ `sca diagnose` command available
 
-### Medium Risk (Should Address)
-4. **Basic error messages** → User confusion
+### High Risk (Must Address Before GA)
+1. **No performance validation** → May fail on large repos ⬅️ **NEXT**
+2. **No example repositories** → Learning curve steep
+3. **No release infrastructure** → Can't publish versioned releases
+
+### Medium Risk (Should Address for GA)
+4. **Better error messages** → User confusion (partially mitigated by `sca diagnose`)
 5. **No version management** → Upgrade path unclear
-6. **Limited examples** → Learning curve steep
 
-### Low Risk (Can Defer)
-7. **No telemetry** → Less user insight
-8. **No plugins** → Limited extensibility
-9. **CLI only** → No visual interface
+### Low Risk (Post-GA)
+6. **No telemetry** → Less user insight
+7. **No plugins** → Limited extensibility
+8. **CLI only** → No visual interface
 
 ---
 
@@ -814,25 +770,48 @@ If timeline is critical, focus on **absolute essentials**:
 
 ---
 
-## Recommendation
+## Path to GA v1.0
 
-### For **Quality GA** (Recommended):
-**Timeline**: 8 weeks
-**Focus**: All P0 + P1 items
-**Outcome**: Production-ready, well-tested, documented
+### Current Status (v0.8.9)
 
-### For **Fast GA** (If time-constrained):
-**Timeline**: 2-3 weeks
-**Focus**: P0 items only + minimal P1
-**Outcome**: Functional but rough edges, iterate post-launch
+**✅ Completed** (3 weeks of work):
+- Testing infrastructure (unit + integration)
+- Claude Code integration documentation
+- Diagnostic tooling
+- Core security hardening (agent immutability)
 
-### Critical Path Items (Must Have):
-1. **Testing** - Prevents production disasters
-2. **Packaging** - Enables easy adoption
-3. **Performance** - Proves it scales
-4. **Tutorials** - Reduces support burden
-5. **Versioning** - Enables upgrades
+**🚧 Remaining** (~3-4 weeks to GA):
+
+### Week 4: Performance Benchmarks (P0) ⬅️ **CURRENT**
+- [ ] Create test repositories (1K, 10K, 50K, 100K files)
+- [ ] Measure audit execution time
+- [ ] Document performance characteristics
+- [ ] Identify bottlenecks and optimize
+
+### Week 5: Example Repositories (P0)
+- [ ] Create vulnerable sample applications (Python, Go, JavaScript)
+- [ ] Document expected findings for each
+- [ ] Provide remediated versions
+
+### Week 6: Release Infrastructure (P0)
+- [ ] GitHub release automation workflow
+- [ ] Semantic versioning (VERSION file + git tags)
+- [ ] CHANGELOG.md automation
+- [ ] GPG signature generation
+
+### Week 7: Final Polish (P1)
+- [ ] Tutorial documentation (getting started, CI/CD setup)
+- [ ] Better error messages with installation hints
+- [ ] Final testing and bug fixes
+- [ ] GA announcement and marketing materials
+
+**Estimated GA Date**: ~3-4 weeks from v0.8.9
+
+**Critical Path Items Remaining**:
+1. **Performance** → Proves it scales (Week 4)
+2. **Examples** → Reduces learning curve (Week 5)
+3. **Releases** → Enables distribution (Week 6)
 
 ---
 
-**Next Steps**: Which timeline works for your team? I can help implement any of these items.
+**Next**: Implement performance benchmarks for large repositories.
