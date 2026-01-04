@@ -653,9 +653,9 @@ Features:
 - [x] **Unit tests** (90% coverage minimum) ✅ v0.8.8
 - [x] **Integration tests** (End-to-end workflows) ✅ v0.8.8
 - [x] **Documentation updates** (Claude Code execution model) ✅ v0.8.8
-- [ ] **Claude Code integration guide** (Installation, API key setup) ⬅️ **NEXT**
-- [ ] **Diagnostic command** (`sca diagnose` checks dependencies)
-- [ ] **Performance benchmarks** (Test up to 100K files)
+- [x] **Claude Code integration guide** (Installation, API key setup) ✅ v0.8.9
+- [x] **Diagnostic command** (`sca diagnose` checks dependencies) ✅ v0.8.9
+- [ ] **Performance benchmarks** (Test up to 100K files) ⬅️ **NEXT**
 - [ ] **Example repositories** (Vulnerable sample apps with expected findings)
 
 ### P1 - Critical (Highly Recommended for GA)
@@ -664,7 +664,6 @@ Features:
 - [ ] **Semantic versioning** (VERSION file, git tags)
 - [ ] **Release automation** (GitHub Actions, changelog)
 - [ ] **Better error messages** (Helpful, actionable)
-- [ ] **Diagnostic tool** (`sca diagnose`)
 
 ### P2 - Important (Should Have)
 - [ ] **Debug logging** (SCA_DEBUG mode)

@@ -1,7 +1,7 @@
 # Security Control Agent (SCA)
 
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen)](https://github.com/opensourcerer-ai/sca)
-[![Version](https://img.shields.io/badge/version-0.8.8-blue)](https://github.com/opensourcerer-ai/sca/releases)
+[![Version](https://img.shields.io/badge/version-0.8.9-blue)](https://github.com/opensourcerer-ai/sca/releases)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green)](LICENSE)
 [![OWASP](https://img.shields.io/badge/OWASP-Top%2010%202021-orange)](https://owasp.org/Top10/)
 [![OWASP API](https://img.shields.io/badge/OWASP-API%20Top%2010%202023-orange)](https://owasp.org/API-Security/)
@@ -347,6 +347,7 @@ Apache License 2.0 - See [LICENSE](LICENSE)
 ## 📚 Documentation
 
 - **[Installation Guide](INSTALL.md)** - Deployment modes and setup
+- **[Claude Code Integration](docs/CLAUDE_CODE_GUIDE.md)** - Setup, authentication, and usage patterns
 - **[Usage Guide](docs/USAGE.md)** - Workflows and best practices
 - **[Architecture](ARCHITECTURE.md)** - System design and security model
 - **[CLI Reference](CLI.md)** - Complete command documentation
