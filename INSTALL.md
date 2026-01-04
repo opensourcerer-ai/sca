@@ -12,18 +12,34 @@
 SCA is a collection of security invariants (markdown files) and wrapper scripts that Claude Code uses to perform AI-powered security audits. The execution flow is:
 
 ```
-User/Cron → sca wrapper script → claude -p "audit using /opt/sca/invariants" → Analysis
+User/Cron → bin/sca (Python) → bin/sec-audit.sh (Bash) → claude code < prompt.txt → report.md
+```
+
+**Components:**
+- `bin/sca` - Python CLI wrapper (parses arguments, dispatches to shell scripts)
+- `bin/sec-audit.sh` - Bash orchestrator (constructs prompt from invariants + file list)
+- `claude code` - Claude Code CLI (AI analysis with filesystem access)
+- `/opt/sca/invariants/` - 150+ security patterns (markdown)
+- `/opt/sca/prompts/` - Runbook, report template, system guidance
+
+**Prompt Construction:**
+The wrapper builds a prompt file containing:
+1. Runbook (RUNBOOK.md) - Step-by-step analysis instructions
+2. Report template (REPORT_TEMPLATE.md) - Output format
+3. Invariants (bundled from invariants/*.md) - Security patterns
+4. File list (from repo-scope.sh) - What to analyze
+5. Overrides (OVERRIDE.md) - Findings to suppress
+6. Filtering instructions (if --exclude-standards, --severity-min, etc.)
+
+**Execution:**
+```bash
+claude code < /tmp/prompt_file.txt > sec-ctrl/reports/security-audit.md
 ```
 
 Claude Code provides:
 - AI reasoning and analysis
 - Filesystem access to read your repository
 - API integration with Anthropic
-
-SCA provides:
-- 150+ security invariants (patterns to detect)
-- Prompts and workflows
-- Report generation templates
 
 ## Installation Methods
 

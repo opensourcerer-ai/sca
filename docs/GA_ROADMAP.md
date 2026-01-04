@@ -1,6 +1,6 @@
 # SCA General Availability (GA) Roadmap
 
-## Current State: MVP v1.0
+## Current State: MVP v0.8.8
 
 ✅ **Completed**:
 - Core security auditing with AI analysis
@@ -9,7 +9,23 @@
 - Interactive suppression with justifications
 - GitHub/Jira ticket creation
 - Comprehensive documentation
-- Basic CLI and shell scripts
+- Testing infrastructure (unit + integration tests) ✅ v0.8.8
+- Claude Code integration (wrapper scripts)
+
+**⚠️ Critical Architecture Note**:
+SCA requires **Claude Code CLI** to function. It is not a standalone tool.
+
+**Execution Model**:
+```
+User/Cron → bin/sca → sec-audit.sh → claude code < prompt.txt → report
+```
+
+**Dependencies**:
+- Claude Code CLI (https://claude.com/claude-code)
+- ANTHROPIC_API_KEY environment variable
+- Bash 4.0+, Python 3.7+, Git, jq
+
+This architectural constraint impacts packaging and distribution strategies (see Section 2).
 
 ---
 
@@ -91,62 +107,69 @@ test-coverage:
 
 ---
 
-### 📦 2. Installation & Distribution (CRITICAL)
+### 📦 2. Installation & Distribution (RECONSIDERED)
 
-**Status**: ⚠️ Partial (manual install only)
+**Status**: ⚠️ Manual install works; advanced packaging **not applicable**
 
-**Required**:
+**Reality Check**:
+SCA requires **Claude Code CLI** to function. It's not a standalone tool. The execution model is:
+```
+bin/sca → sec-audit.sh → claude code < prompt → analysis
+```
 
-#### Package Managers
+This changes the packaging strategy entirely:
+
+#### What Makes Sense:
+
+1. **Git Clone + Make Install** ✅ (Current, works well)
 ```bash
-# Homebrew (macOS)
-brew install sca
-
-# APT (Ubuntu/Debian)
-sudo apt-get install sca
-
-# YUM/DNF (RHEL/Fedora)
-sudo dnf install sca
-
-# Snap (Universal Linux)
-sudo snap install sca
-
-# Docker Hub
-docker pull sca:latest
+git clone https://github.com/your-org/sca.git
+cd sca
+sudo make install PREFIX=/opt/sca
 ```
 
-**Implementation Needed**:
-
-1. **Homebrew Formula** (`sca.rb`)
-```ruby
-class Sca < Formula
-  desc "Security Control Agent - AI-driven security auditing"
-  homepage "https://github.com/your-org/sca"
-  url "https://github.com/your-org/sca/archive/v1.0.0.tar.gz"
-  sha256 "..."
-
-  depends_on "python@3.11"
-  depends_on "jq"
-  depends_on "git"
-
-  def install
-    prefix.install Dir["*"]
-    bin.install_symlink prefix/"bin/sca"
-  end
-
-  test do
-    system "#{bin}/sca", "--help"
-  end
-end
+2. **GitHub Releases with Tarball**
+```bash
+# Download release
+curl -L https://github.com/your-org/sca/releases/latest/download/sca.tar.gz | tar xz
+sudo mv sca /opt/sca
+sudo ln -s /opt/sca/bin/sca /usr/local/bin/sca
 ```
 
-2. **Debian Package** (`debian/control`, `debian/rules`)
-3. **RPM Spec** (`sca.spec`)
-4. **Docker Official Image**
-5. **GitHub Releases** with binaries
+3. **Installation Script** (for convenience)
+```bash
+# One-liner install
+curl -fsSL https://sca.example.com/install.sh | bash
+```
 
-**Effort**: 2 weeks
-**Priority**: P0 (Blocker for GA)
+#### What Does NOT Make Sense:
+
+- ❌ **Homebrew** - Users still need Claude Code CLI installed separately
+- ❌ **APT/YUM packages** - Overkill for markdown files + shell scripts
+- ❌ **Docker** - Claude Code needs host filesystem access, containers add complexity
+- ❌ **Standalone binaries** - Not applicable (depends on Claude Code)
+
+#### What We Should Focus On Instead:
+
+1. **Claude Code Integration Documentation**
+   - How to install Claude Code CLI
+   - How to configure ANTHROPIC_API_KEY
+   - Example prompts for interactive use
+   - Cron job examples
+
+2. **Installation Verification**
+   ```bash
+   sca diagnose
+   # Checks: Claude Code installed, API key set, agent readable, etc.
+   ```
+
+3. **Quick Start Examples**
+   - Vulnerable sample repositories
+   - Expected findings
+   - Step-by-step walkthroughs
+
+**Revised Priority**: P1 (Nice to have, but manual install is acceptable)
+**Effort**: 1 week for polished install script + diagnose command
 
 ---
 
@@ -629,10 +652,11 @@ Features:
 ### P0 - Blockers (Must Have for GA)
 - [x] **Unit tests** (90% coverage minimum) ✅ v0.8.8
 - [x] **Integration tests** (End-to-end workflows) ✅ v0.8.8
-- [ ] **Package managers** (Homebrew, APT, Docker) ⬅️ **NEXT**
-- [ ] **Secure credential management** (Keychain, secrets managers)
-- [ ] **Agent signature verification** (GPG signing)
+- [x] **Documentation updates** (Claude Code execution model) ✅ v0.8.8
+- [ ] **Claude Code integration guide** (Installation, API key setup) ⬅️ **NEXT**
+- [ ] **Diagnostic command** (`sca diagnose` checks dependencies)
 - [ ] **Performance benchmarks** (Test up to 100K files)
+- [ ] **Example repositories** (Vulnerable sample apps with expected findings)
 
 ### P1 - Critical (Highly Recommended for GA)
 - [ ] **Tutorial documentation** (Getting started guides)

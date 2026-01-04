@@ -3,6 +3,8 @@
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen)](https://github.com/opensourcerer-ai/sca)
 [![Version](https://img.shields.io/badge/version-0.8.8-blue)](https://github.com/opensourcerer-ai/sca/releases)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green)](LICENSE)
+[![OWASP](https://img.shields.io/badge/OWASP-Top%2010%202021-orange)](https://owasp.org/Top10/)
+[![OWASP API](https://img.shields.io/badge/OWASP-API%20Top%2010%202023-orange)](https://owasp.org/API-Security/)
 
 > **AI-Powered Security Auditing for Modern Codebases**
 >
@@ -123,22 +125,32 @@ SCA uses a hybrid execution model:
 1. **Claude Code** - Execution engine providing:
    - AI-powered analysis and reasoning
    - Filesystem access to read your repository
-   - API integration for advanced features
+   - API integration with Anthropic
 
-2. **SCA Invariants** - Security knowledge base:
+2. **SCA Wrapper Scripts** - Orchestration:
+   - `bin/sca` (Python) - CLI argument parser
+   - `bin/sec-audit.sh` (Bash) - Constructs prompts, invokes Claude
+   - Command: `claude code < prompt.txt > report.md`
+
+3. **SCA Invariants** - Security knowledge base:
    - 150+ security rules across 6 languages (markdown files)
    - Located at `/opt/sca/invariants/` (immutable, read-only)
-   - Prompts and workflows for Claude Code
+   - Prompts and workflows in `/opt/sca/prompts/`
 
-3. **Your Repository** - Subject of analysis (never modified):
+4. **Your Repository** - Subject of analysis (never modified):
    - SCA only reads files, never writes to source
    - All output goes to `sec-ctrl/` directory
 
-4. **Control Directory** (`sec-ctrl/`) - SCA's workspace:
+5. **Control Directory** (`sec-ctrl/`) - SCA's workspace:
    - Reports, suggestions, state tracking
    - Created in your repository but `.gitignore`-able
 
-**Flow**: `claude-code` → reads `/opt/sca/invariants/` → analyzes your repo → writes to `sec-ctrl/`
+**Execution Flow**:
+```
+sca audit → sec-audit.sh → claude code < prompt → Analysis → sec-ctrl/reports/
+```
+
+The prompt file includes: invariants, file list, overrides, runbook, and report template.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for details.
 
