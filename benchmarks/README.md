@@ -271,12 +271,15 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install Claude Code
-        run: curl -fsSL https://claude.com/download/cli/linux | bash
+      - name: Install and configure Claude Code
+        run: |
+          # Install Claude Code CLI
+          curl -fsSL https://claude.com/download/cli/linux | bash
+
+          # Configure authentication (see Claude Code docs)
+          # SCA does not manage Claude Code authentication
 
       - name: Run small benchmark
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           cd benchmarks
           ./scripts/run-benchmark.sh --size small --runs 3
@@ -302,9 +305,9 @@ jobs:
 - Verify write permissions on test-repos/
 
 ### "Benchmark hangs or times out"
-- Check Claude API connectivity
-- Verify ANTHROPIC_API_KEY is set
-- Monitor API rate limits
+- Check Claude Code CLI is properly authenticated
+- Ensure `claude code` works standalone: `echo "test" | claude code`
+- Monitor Claude API rate limits (managed by Claude Code, not SCA)
 - Try smaller repository size first
 
 ### "Out of memory errors"

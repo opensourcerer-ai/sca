@@ -176,7 +176,9 @@ vim sec-ctrl/config/ignore.paths
 
 ## CI/CD Integration
 
-**Important**: CI/CD environments need Claude Code CLI and Anthropic API key.
+**Important**: CI/CD environments need Claude Code CLI to be installed and authenticated.
+
+**Authentication Note**: SCA does not manage Claude Code authentication. You must ensure `claude` CLI is properly configured in your CI/CD environment. See [Claude Code documentation](https://claude.com/claude-code) for authentication setup.
 
 ### GitHub Actions Example
 ```yaml
@@ -190,11 +192,15 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install Claude Code
+      - name: Install and configure Claude Code
         run: |
           # Install Claude Code CLI
           curl -L https://claude.com/download/cli/linux | tar xz
           sudo mv claude /usr/local/bin/claude
+
+          # Configure authentication (see Claude Code docs)
+          # Example: claude configure --api-key ${{ secrets.ANTHROPIC_API_KEY }}
+          # The exact command depends on Claude Code CLI's authentication mechanism
 
       - name: Install SCA
         run: |
@@ -205,9 +211,9 @@ jobs:
           sudo ln -s /opt/sca/bin/sca /usr/local/bin/sca
 
       - name: Run audit
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
+          # SCA calls 'claude code < prompt.txt'
+          # Authentication is handled by Claude Code CLI
           sca audit --verbose
 
       - name: Upload report
@@ -228,15 +234,15 @@ jobs:
 # /etc/cron.d/sca-nightly-audit
 # Run nightly audit at 2 AM and email results
 
-0 2 * * * user ANTHROPIC_API_KEY=your-key /opt/sca/bin/sca audit --repo /srv/myapp && \
+0 2 * * * user /opt/sca/bin/sca audit --repo /srv/myapp && \
   mail -s "Security Audit - No Issues" team@example.com < /srv/myapp/sec-ctrl/reports/security-audit.latest.md || \
   mail -s "Security Audit - CRITICAL FINDINGS" team@example.com < /srv/myapp/sec-ctrl/reports/security-audit.latest.md
 ```
 
 **Cron Setup Notes:**
-- Set `ANTHROPIC_API_KEY` environment variable
-- Ensure `claude` CLI is in PATH or set `CLAUDE_CODE_BIN`
-- Test with `claude --version` before scheduling
+- Ensure `claude` CLI is in PATH or set `CLAUDE_CODE_BIN=/path/to/claude`
+- Claude Code must be configured/authenticated for the user running the cron job
+- Test with `claude code < /tmp/test-prompt.txt` before scheduling
 
 ---
 
@@ -254,16 +260,18 @@ which claude
 export CLAUDE_CODE_BIN=/path/to/claude
 ```
 
-### API Key Issues
-**Error**: `Anthropic API key not found`
+### Claude Code Authentication Issues
+**Error**: Claude Code fails to authenticate or returns API errors
 
-**Solution**: Set environment variable:
+**Solution**: Configure Claude Code CLI (not SCA):
 ```bash
-export ANTHROPIC_API_KEY=your-api-key-here
+# Check if Claude Code is authenticated
+claude --version
+echo "test prompt" | claude code
 
-# For cron jobs, add to crontab:
-ANTHROPIC_API_KEY=your-key
-0 2 * * * /opt/sca/bin/sca audit --repo /srv/myapp
+# If authentication fails, configure Claude Code
+# (See Claude Code documentation for exact command)
+# SCA does not manage this - it's Claude Code's responsibility
 ```
 
 ### "Agent dir is writable" (Exit 4)
