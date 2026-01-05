@@ -783,10 +783,15 @@ Features:
 **🚧 Remaining** (~3-4 weeks to GA):
 
 ### Week 4: Performance Benchmarks (P0) ⬅️ **CURRENT**
-- [ ] Create test repositories (1K, 10K, 50K, 100K files)
-- [ ] Measure audit execution time
-- [ ] Document performance characteristics
-- [ ] Identify bottlenecks and optimize
+- [x] **Benchmark infrastructure** (v0.8.9) ✅
+  - Test repository generator (`benchmarks/generators/generate-test-repo.py`)
+  - Benchmark runner (`benchmarks/scripts/run-benchmark.sh`)
+  - Comprehensive documentation (`benchmarks/README.md`)
+  - Validated: Successfully generated 1K file test repository
+- [ ] **Run benchmarks** - Execute on all sizes (1K, 10K, 50K, 100K files)
+- [ ] **Collect performance data** - Measure execution time, memory, CPU
+- [ ] **Document baseline performance** - Create PERFORMANCE.md with results
+- [ ] **Identify bottlenecks** - Profile and optimize if targets not met
 
 ### Week 5: Example Repositories (P0)
 - [ ] Create vulnerable sample applications (Python, Go, JavaScript)
@@ -814,4 +819,4 @@ Features:
 
 ---
 
-**Next**: Implement performance benchmarks for large repositories.
+**Next**: Run performance benchmarks and collect baseline data (infrastructure complete).
